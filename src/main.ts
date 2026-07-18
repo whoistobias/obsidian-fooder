@@ -1,134 +1,152 @@
-import {
-	Editor,
-	MarkdownView,
-	MarkdownFileInfo,
-	Modal,
-	Notice,
-	Plugin,
-	WorkspaceLeaf,
-} from 'obsidian';
+import { MarkdownView, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
-	MyPluginSettings,
-	SampleSettingTab,
+	FooderSettingTab,
+	type FooderSettings,
 } from './settings';
-import { ExampleView, VIEW_TYPE_EXAMPLE } from './fooder-view';
+import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
+import { fileHasRecipeTag } from './utils/recipe';
 
-// Remember to rename these classes and interfaces!
-
-export default class MyPlugin extends Plugin {
-	settings!: MyPluginSettings;
+export default class FooderPlugin extends Plugin {
+	settings!: FooderSettings;
+	private fooderViewActivation: Promise<void> | null = null;
 
 	async onload() {
 		await this.loadSettings();
-		this.registerView(VIEW_TYPE_EXAMPLE, (leaf) => new ExampleView(leaf));
 
-		this.addRibbonIcon('dice', 'Activate view', async () => {
-			await this.activateView();
-		});
+		this.registerView(VIEW_TYPE_FOODER, (leaf) => new FooderView(leaf, this));
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
+		this.registerEvent(
+			this.app.workspace.on('active-leaf-change', () => {
+				void this.syncFooderView();
+			}),
+		);
 
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
-			},
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (
-				editor: Editor,
-				_ctx: MarkdownView | MarkdownFileInfo,
-			) => {
-				editor.replaceSelection('Sample editor command');
-			},
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView =
-					this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+		this.registerEvent(
+			this.app.workspace.on('file-open', () => {
+				void this.syncFooderView();
+			}),
+		);
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
+		this.registerEvent(
+			this.app.vault.on('modify', (file) => {
+				if (file instanceof TFile) {
+					void this.refreshFooderViewIfActive(file);
 				}
-				return false;
+			}),
+		);
+
+		this.registerEvent(
+			this.app.metadataCache.on('changed', (file) => {
+				void this.refreshFooderViewIfActive(file);
+			}),
+		);
+
+		this.addCommand({
+			id: 'show-linked-foods',
+			name: 'Show linked foods',
+			callback: () => {
+				void this.activateFooderView();
 			},
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new FooderSettingTab(this.app, this));
 
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
-			new Notice('Click');
-		});
+		await this.syncFooderView();
 	}
 
-	onunload() {}
-
-	async loadSettings() {
+	async loadSettings(): Promise<void> {
 		this.settings = Object.assign(
 			{},
 			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<MyPluginSettings>,
+			(await this.loadData()) as Partial<FooderSettings>,
 		);
 	}
 
-	async saveSettings() {
+	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
 	}
-	async activateView() {
-		const { workspace } = this.app;
 
-		let leaf: WorkspaceLeaf | null = null;
-		const leaves = workspace.getLeavesOfType(VIEW_TYPE_EXAMPLE);
-
-		if (leaves.length > 0) {
-			// A leaf with our view already exists, use that
-			leaf = leaves[0] || null;
-		} else {
-			// Our view could not be found in the workspace, create a new leaf
-			// in the right sidebar for it
-			leaf = workspace.getRightLeaf(false);
-			if (leaf) {
-				await leaf.setViewState({
-					type: VIEW_TYPE_EXAMPLE,
-					active: true,
-				});
+	updateFooderViewsSettings(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)) {
+			if (leaf.view instanceof FooderView) {
+				leaf.view.updateSettings(this.settings);
 			}
 		}
-
-		// "Reveal" the leaf in case it is in a collapsed sidebar
-		workspace.revealLeaf(leaf);
-	}
-}
-
-class SampleModal extends Modal {
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.setText('Woah!');
 	}
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+	private getActiveMarkdownFile(): TFile | null {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		return view?.file ?? null;
+	}
+
+	private getFooderView(): FooderView | null {
+		const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)[0];
+		const view = leaf?.view;
+		return view instanceof FooderView ? view : null;
+	}
+
+	private async syncFooderView(): Promise<void> {
+		const file = this.getActiveMarkdownFile();
+
+		if (file && fileHasRecipeTag(this.app, file)) {
+			await this.activateFooderView();
+			await this.getFooderView()?.updateForFile(file);
+			return;
+		}
+
+		// this.app.workspace.detachLeavesOfType(VIEW_TYPE_FOODER);
+	}
+
+	private async refreshFooderViewIfActive(
+		_modifiedFile: TFile,
+	): Promise<void> {
+		const activeFile = this.getActiveMarkdownFile();
+		if (!activeFile || !fileHasRecipeTag(this.app, activeFile)) {
+			return;
+		}
+
+		const fooderView = this.getFooderView();
+		if (fooderView) {
+			await fooderView.updateForFile(activeFile);
+			return;
+		}
+
+		await this.syncFooderView();
+	}
+
+	private async activateFooderView(): Promise<void> {
+		if (!this.fooderViewActivation) {
+			this.fooderViewActivation = this.openFooderView().finally(() => {
+				this.fooderViewActivation = null;
+			});
+		}
+
+		await this.fooderViewActivation;
+	}
+
+	private async openFooderView(): Promise<void> {
+		const { workspace } = this.app;
+		const leaves = workspace.getLeavesOfType(VIEW_TYPE_FOODER);
+
+		for (const duplicateLeaf of leaves.slice(1)) {
+			duplicateLeaf.detach();
+		}
+
+		let leaf: WorkspaceLeaf | null = leaves[0] ?? null;
+
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false);
+			if (!leaf) {
+				return;
+			}
+
+			await leaf.setViewState({
+				type: VIEW_TYPE_FOODER,
+				active: true,
+			});
+		}
+
+		void workspace.revealLeaf(leaf);
 	}
 }

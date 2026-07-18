@@ -16,5 +16,5 @@
 		"lib": ["ES2021", "DOM"],
 		"verbatimModuleSyntax": true,
 	},
-	"include": ["**/*.ts", "**/*.svelte"],
+	"include": ["**/*.ts", "**/*.svelte.ts", "**/*.svelte"],
 }

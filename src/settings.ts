@@ -1,18 +1,18 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import MyPlugin from './main';
+import type FooderPlugin from './main';
 
-export interface MyPluginSettings {
-	mySetting: string;
+export interface FooderSettings {
+	dailyCalorieGoal: number;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default',
+export const DEFAULT_SETTINGS: FooderSettings = {
+	dailyCalorieGoal: 2000,
 };
 
-export class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
+export class FooderSettingTab extends PluginSettingTab {
+	plugin: FooderPlugin;
 
-	constructor(app: App, plugin: MyPlugin) {
+	constructor(app: App, plugin: FooderPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -23,15 +23,21 @@ export class SampleSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Settings #1')
-			.setDesc("It's a secret")
+			.setName('Daily calorie goal')
+			.setDesc('Target calories for each day.')
 			.addText((text) =>
 				text
-					.setPlaceholder('Enter your secret')
-					.setValue(this.plugin.settings.mySetting)
+					.setPlaceholder(String(DEFAULT_SETTINGS.dailyCalorieGoal))
+					.setValue(String(this.plugin.settings.dailyCalorieGoal))
 					.onChange(async (value) => {
-						this.plugin.settings.mySetting = value;
+						const parsed = Number(value);
+						if (!Number.isFinite(parsed) || parsed <= 0) {
+							return;
+						}
+
+						this.plugin.settings.dailyCalorieGoal = parsed;
 						await this.plugin.saveSettings();
+						this.plugin.updateFooderViewsSettings();
 					}),
 			);
 	}
