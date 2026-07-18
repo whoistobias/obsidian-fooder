@@ -5,12 +5,14 @@ import {
 	Modal,
 	Notice,
 	Plugin,
+	WorkspaceLeaf,
 } from 'obsidian';
 import {
 	DEFAULT_SETTINGS,
 	MyPluginSettings,
 	SampleSettingTab,
 } from './settings';
+import { ExampleView, VIEW_TYPE_EXAMPLE } from './fooder-view';
 
 // Remember to rename these classes and interfaces!
 
@@ -19,11 +21,10 @@ export default class MyPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		this.registerView(VIEW_TYPE_EXAMPLE, (leaf) => new ExampleView(leaf));
 
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (_evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.addRibbonIcon('dice', 'Activate view', async () => {
+			await this.activateView();
 		});
 
 		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
@@ -79,11 +80,6 @@ export default class MyPlugin extends Plugin {
 		this.registerDomEvent(activeDocument, 'click', (_evt: MouseEvent) => {
 			new Notice('Click');
 		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(
-			window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-		);
 	}
 
 	onunload() {}
@@ -98,6 +94,30 @@ export default class MyPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+	}
+	async activateView() {
+		const { workspace } = this.app;
+
+		let leaf: WorkspaceLeaf | null = null;
+		const leaves = workspace.getLeavesOfType(VIEW_TYPE_EXAMPLE);
+
+		if (leaves.length > 0) {
+			// A leaf with our view already exists, use that
+			leaf = leaves[0] || null;
+		} else {
+			// Our view could not be found in the workspace, create a new leaf
+			// in the right sidebar for it
+			leaf = workspace.getRightLeaf(false);
+			if (leaf) {
+				await leaf.setViewState({
+					type: VIEW_TYPE_EXAMPLE,
+					active: true,
+				});
+			}
+		}
+
+		// "Reveal" the leaf in case it is in a collapsed sidebar
+		workspace.revealLeaf(leaf);
 	}
 }
 
