@@ -16,6 +16,8 @@ export default class FooderPlugin extends Plugin {
 
 		this.registerView(VIEW_TYPE_FOODER, (leaf) => new FooderView(leaf, this));
 
+		await this.reconcileExistingFooderLeaves();
+
 		this.registerEvent(
 			this.app.workspace.on('active-leaf-change', () => {
 				void this.syncFooderView();
@@ -29,16 +31,14 @@ export default class FooderPlugin extends Plugin {
 		);
 
 		this.registerEvent(
-			this.app.vault.on('modify', (file) => {
-				if (file instanceof TFile) {
-					void this.refreshFooderViewIfActive(file);
-				}
+			this.app.metadataCache.on('changed', (file) => {
+				void this.refreshFooderViewIfActive(file);
 			}),
 		);
 
 		this.registerEvent(
-			this.app.metadataCache.on('changed', (file) => {
-				void this.refreshFooderViewIfActive(file);
+			this.app.metadataCache.on('resolved', () => {
+				void this.syncFooderView();
 			}),
 		);
 
@@ -51,6 +51,10 @@ export default class FooderPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new FooderSettingTab(this.app, this));
+
+		this.app.workspace.onLayoutReady(() => {
+			void this.syncFooderView();
+		});
 
 		await this.syncFooderView();
 	}
@@ -67,42 +71,71 @@ export default class FooderPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
+	getActiveRecipeFile(): TFile | null {
+		const file = this.getActiveMarkdownFile();
+		if (!file || !fileHasRecipeTag(this.app, file)) {
+			return null;
+		}
+
+		return file;
+	}
+
+	async populateFooderView(view: FooderView): Promise<void> {
+		await view.updateForFile(this.getActiveRecipeFile());
+	}
+
 	updateFooderViewsSettings(): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)) {
-			if (leaf.view instanceof FooderView) {
-				leaf.view.updateSettings(this.settings);
-			}
+		for (const view of this.getFooderViews()) {
+			view.updateSettings(this.settings);
 		}
 	}
 
 	private getActiveMarkdownFile(): TFile | null {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile?.extension === 'md') {
+			return activeFile;
+		}
+
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		return view?.file ?? null;
 	}
 
+	private getFooderViews(): FooderView[] {
+		return this.app.workspace
+			.getLeavesOfType(VIEW_TYPE_FOODER)
+			.map((leaf) => leaf.view)
+			.filter((view): view is FooderView => view.getViewType() === VIEW_TYPE_FOODER);
+	}
+
 	private getFooderView(): FooderView | null {
-		const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)[0];
-		const view = leaf?.view;
-		return view instanceof FooderView ? view : null;
+		return this.getFooderViews()[0] ?? null;
+	}
+
+	private async reconcileExistingFooderLeaves(): Promise<void> {
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)) {
+			await leaf.setViewState({
+				type: VIEW_TYPE_FOODER,
+				active: false,
+			});
+		}
 	}
 
 	private async syncFooderView(): Promise<void> {
-		const file = this.getActiveMarkdownFile();
-
-		if (file && fileHasRecipeTag(this.app, file)) {
-			await this.activateFooderView();
-			await this.getFooderView()?.updateForFile(file);
+		const file = this.getActiveRecipeFile();
+		if (!file) {
 			return;
 		}
 
-		// this.app.workspace.detachLeavesOfType(VIEW_TYPE_FOODER);
+		await this.activateFooderView();
+
+		for (const view of this.getFooderViews()) {
+			await view.updateForFile(file);
+		}
 	}
 
-	private async refreshFooderViewIfActive(
-		_modifiedFile: TFile,
-	): Promise<void> {
-		const activeFile = this.getActiveMarkdownFile();
-		if (!activeFile || !fileHasRecipeTag(this.app, activeFile)) {
+	private async refreshFooderViewIfActive(modifiedFile: TFile): Promise<void> {
+		const activeFile = this.getActiveRecipeFile();
+		if (!activeFile || modifiedFile.path !== activeFile.path) {
 			return;
 		}
 
@@ -141,6 +174,11 @@ export default class FooderPlugin extends Plugin {
 				return;
 			}
 
+			await leaf.setViewState({
+				type: VIEW_TYPE_FOODER,
+				active: true,
+			});
+		} else if (leaf.view.getViewType() !== VIEW_TYPE_FOODER) {
 			await leaf.setViewState({
 				type: VIEW_TYPE_FOODER,
 				active: true,

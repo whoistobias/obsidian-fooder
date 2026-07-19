@@ -15,6 +15,7 @@ export const VIEW_TYPE_FOODER = 'fooder-view';
 export class FooderView extends ItemView {
 	private viewProps: FooderViewProps | undefined;
 	private svelteComponent: ReturnType<typeof MacrosView> | undefined;
+	private pendingFile: TFile | null | undefined;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -43,6 +44,15 @@ export class FooderView extends ItemView {
 			target: this.contentEl,
 			props: this.viewProps,
 		});
+
+		if (this.pendingFile !== undefined) {
+			const file = this.pendingFile;
+			this.pendingFile = undefined;
+			await this.updateForFile(file);
+			return;
+		}
+
+		await this.plugin.populateFooderView(this);
 	}
 
 	async onClose(): Promise<void> {
@@ -52,10 +62,12 @@ export class FooderView extends ItemView {
 		}
 
 		this.viewProps = undefined;
+		this.pendingFile = undefined;
 	}
 
 	async updateForFile(file: TFile | null): Promise<void> {
 		if (!this.viewProps) {
+			this.pendingFile = file;
 			return;
 		}
 
