@@ -72,12 +72,25 @@
 		</div>
 		<hr />
 		<div class="fooder__section-header">Logged</div>
+		<div class="fooder__line-item">
+			<div>Item name <span>24g</span></div>
+			<div>100 kcal</div>
+		</div>
 	{:else}
 		<p class="fooder-view__empty">{emptyMessage}</p>
 	{/if}
 </div>
 
 <style>
+	.fooder__line-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		:last-child {
+			color: var(--text-faint);
+			font-size: var(--font-ui-smaller);
+		}
+	}
 	.fooder__section-header {
 		color: var(--text-muted);
 		font-size: var(--font-ui-smaller);
