@@ -1,12 +1,18 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, PluginSettingTab, type SettingDefinitionItem } from 'obsidian';
 import type FooderPlugin from './main';
 
 export interface FooderSettings {
-	dailyCalorieGoal: number;
+	dailyCalorieTarget: number;
+	dailyProteinTarget: number;
+	dailyCarbsTarget: number;
+	dailyFatTarget: number;
 }
 
 export const DEFAULT_SETTINGS: FooderSettings = {
-	dailyCalorieGoal: 2000,
+	dailyCalorieTarget: 2000,
+	dailyProteinTarget: 50,
+	dailyCarbsTarget: 100,
+	dailyFatTarget: 40,
 };
 
 export class FooderSettingTab extends PluginSettingTab {
@@ -17,28 +23,44 @@ export class FooderSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	display(): void {
-		const { containerEl } = this;
-
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Daily calorie goal')
-			.setDesc('Target calories for each day.')
-			.addText((text) =>
-				text
-					.setPlaceholder(String(DEFAULT_SETTINGS.dailyCalorieGoal))
-					.setValue(String(this.plugin.settings.dailyCalorieGoal))
-					.onChange(async (value) => {
-						const parsed = Number(value);
-						if (!Number.isFinite(parsed) || parsed <= 0) {
-							return;
-						}
-
-						this.plugin.settings.dailyCalorieGoal = parsed;
-						await this.plugin.saveSettings();
-						this.plugin.updateFooderViewsSettings();
-					}),
-			);
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: 'Calorie target',
+				desc: 'Target calories for each day.',
+				control: {
+					type: 'number' as const,
+					key: 'dailyCalorieTarget',
+					min: 0,
+				},
+			},
+			{
+				name: 'Protein target',
+				desc: 'Target protein in grams for each day.',
+				control: {
+					type: 'number' as const,
+					key: 'dailyProteinTarget',
+					min: 0,
+				},
+			},
+			{
+				name: 'Carbs target',
+				desc: 'Target carbohydrates in grams for each day.',
+				control: {
+					type: 'number' as const,
+					key: 'dailyCarbsTarget',
+					min: 0,
+				},
+			},
+			{
+				name: 'Fat target',
+				desc: 'Target fat in grams for each day.',
+				control: {
+					type: 'number' as const,
+					key: 'dailyFatTarget',
+					min: 0,
+				},
+			},
+		];
 	}
 }

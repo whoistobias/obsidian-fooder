@@ -1,3 +1,5 @@
+import type { UnitOfMeasure } from './utils/units';
+
 export interface FooderLinkSection {
 	link: string;
 	content: string | null;
@@ -12,4 +14,35 @@ export interface FooderViewState {
 
 export interface FoodItem {
 	name: string;
+	amount: number;
+	calories: number;
+	protein: number;
+	fat: number;
+	carbs: number;
+	weight_grams: number;
+	fiber: number;
+	issues: string[];
 }
+
+export interface Quantity {
+	amount: number;
+	unit: UnitOfMeasure;
+}
+
+export interface RequiredFrontmatter {
+	servingSize: number;
+	servingSizeUnit: UnitOfMeasure;
+	calories: number;
+	protein: number;
+	carbs: number;
+	fat: number;
+	fiber: number;
+}
+
+export const SERVING_SIZE_FRONTMATTER_KEY = 'serving_size';
+export const SERVING_SIZE_UNIT_FRONTMATTER_KEY = 'serving_size_unit';
+export const CALORIES_FRONTMATTER_KEY = 'calories';
+export const PROTEIN_FRONTMATTER_KEY = 'protein';
+export const CARBS_FRONTMATTER_KEY = 'carbs';
+export const FAT_FRONTMATTER_KEY = 'fat';
+export const FIBER_FRONTMATTER_KEY = 'fiber';

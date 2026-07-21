@@ -5,7 +5,8 @@ import {
 	type FooderSettings,
 } from './settings';
 import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
-import { fileHasRecipeTag } from './utils/recipe';
+import { RECIPE_TAG } from './utils/recipe';
+import { fileHasTag } from './utils/tags';
 
 export default class FooderPlugin extends Plugin {
 	settings!: FooderSettings;
@@ -14,7 +15,10 @@ export default class FooderPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.registerView(VIEW_TYPE_FOODER, (leaf) => new FooderView(leaf, this));
+		this.registerView(
+			VIEW_TYPE_FOODER,
+			(leaf) => new FooderView(leaf, this),
+		);
 
 		await this.reconcileExistingFooderLeaves();
 
@@ -73,7 +77,14 @@ export default class FooderPlugin extends Plugin {
 
 	getActiveRecipeFile(): TFile | null {
 		const file = this.getActiveMarkdownFile();
-		if (!file || !fileHasRecipeTag(this.app, file)) {
+		if (!file) {
+			return null;
+		}
+		const cache = this.app.metadataCache.getFileCache(file);
+		if (!cache) {
+			return null;
+		}
+		if (!fileHasTag(cache, RECIPE_TAG)) {
 			return null;
 		}
 
@@ -104,7 +115,10 @@ export default class FooderPlugin extends Plugin {
 		return this.app.workspace
 			.getLeavesOfType(VIEW_TYPE_FOODER)
 			.map((leaf) => leaf.view)
-			.filter((view): view is FooderView => view.getViewType() === VIEW_TYPE_FOODER);
+			.filter(
+				(view): view is FooderView =>
+					view.getViewType() === VIEW_TYPE_FOODER,
+			);
 	}
 
 	private getFooderView(): FooderView | null {
@@ -112,7 +126,9 @@ export default class FooderPlugin extends Plugin {
 	}
 
 	private async reconcileExistingFooderLeaves(): Promise<void> {
-		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)) {
+		for (const leaf of this.app.workspace.getLeavesOfType(
+			VIEW_TYPE_FOODER,
+		)) {
 			await leaf.setViewState({
 				type: VIEW_TYPE_FOODER,
 				active: false,
@@ -133,7 +149,9 @@ export default class FooderPlugin extends Plugin {
 		}
 	}
 
-	private async refreshFooderViewIfActive(modifiedFile: TFile): Promise<void> {
+	private async refreshFooderViewIfActive(
+		modifiedFile: TFile,
+	): Promise<void> {
 		const activeFile = this.getActiveRecipeFile();
 		if (!activeFile || modifiedFile.path !== activeFile.path) {
 			return;

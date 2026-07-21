@@ -2,7 +2,7 @@
 	"id": "fooder",
 	"name": "Fooder",
 	"version": "1.0.0",
-	"minAppVersion": "1.7.2",
+	"minAppVersion": "1.13.0",
 	"description": "Work with foods, recipes, and macros in an Obsidian-first way.",
 	"author": "whoistobias",
 	"authorUrl": "https://github.com/whoistobias",

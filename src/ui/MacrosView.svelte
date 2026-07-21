@@ -5,6 +5,10 @@
 
 	interface MacrosSummary {
 		calories: number;
+		protein: number;
+		fat: number;
+		carbs: number;
+		fiber: number;
 	}
 
 	interface Props {
@@ -17,8 +21,23 @@
 	const emptyMessage = 'Open a recipe note to see linked foods.';
 
 	let summary: MacrosSummary = $derived.by(() => {
+		const summed = items.reduce(
+			(acc, item) => {
+				acc.calories += item.calories;
+				acc.protein += item.protein;
+				acc.fat += item.fat;
+				acc.carbs += item.carbs;
+				acc.fiber += item.fiber;
+				return acc;
+			},
+			{ calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 },
+		);
 		return {
-			calories: 2150,
+			calories: Number(summed.calories.toFixed(1)),
+			protein: Number(summed.protein.toFixed(1)),
+			fat: Number(summed.fat.toFixed(1)),
+			carbs: Number(summed.carbs.toFixed(1)),
+			fiber: Number(summed.fiber.toFixed(1)),
 		};
 	});
 	//
@@ -29,53 +48,60 @@
 		<div class="fooder__item">
 			<div class="fooder__calories">
 				<div class="fooder__calories-current">{summary.calories}</div>
-				<div>&nbsp;/ {settings.dailyCalorieGoal}</div>
+				<div>&nbsp;/ {settings.dailyCalorieTarget}</div>
 			</div>
 			<ProgressBar
 				value={summary.calories}
-				max={settings.dailyCalorieGoal}
+				max={settings.dailyCalorieTarget}
 				color="#c3c2b7"
 			/>
 		</div>
 		<div class="fooder__item">
 			<div class="fooder__item-header">
 				<div>protein</div>
-				<div>100 / 150g</div>
+				<div>{summary.protein} / {settings.dailyProteinTarget}</div>
 			</div>
 			<ProgressBar
-				value={summary.calories}
-				max={settings.dailyCalorieGoal}
+				value={summary.protein}
+				max={settings.dailyProteinTarget}
 				color="#0f6e56"
 			/>
 		</div>
 		<div class="fooder__item">
 			<div class="fooder__item-header">
 				<div>carbs</div>
-				<div>100 / 150g</div>
+				<div>{summary.carbs} / {settings.dailyCarbsTarget}</div>
 			</div>
 			<ProgressBar
-				value={summary.calories}
-				max={settings.dailyCalorieGoal}
+				value={summary.carbs}
+				max={settings.dailyCarbsTarget}
 				color="#185fa5"
 			/>
 		</div>
 		<div class="fooder__item">
 			<div class="fooder__item-header">
 				<div>fat</div>
-				<div>100 / 150g</div>
+				<div>{summary.fat} / {settings.dailyFatTarget}</div>
 			</div>
 			<ProgressBar
-				value={summary.calories}
-				max={settings.dailyCalorieGoal}
+				value={summary.fat}
+				max={settings.dailyFatTarget}
 				color="#854f0b"
 			/>
 		</div>
 		<hr />
 		<div class="fooder__section-header">Logged</div>
-		<div class="fooder__line-item">
-			<div>Item name <span>24g</span></div>
-			<div>100 kcal</div>
-		</div>
+		{#each items as item, i (i + item.name)}
+			<div class="fooder__line-item">
+				<div>{item.name} <span>{item.weight_grams}g</span></div>
+				<div>{item.calories} kcal</div>
+			</div>
+			{#each item.issues as issue, i (i)}
+				<div class="fooder__line-item">
+					<div>{issue}</div>
+				</div>
+			{/each}
+		{/each}
 	{:else}
 		<p class="fooder-view__empty">{emptyMessage}</p>
 	{/if}
