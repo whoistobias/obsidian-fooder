@@ -80,7 +80,10 @@ function createFoodItem(
 		},
 		issues,
 	} = validateFrontmatter(cache.frontmatter ?? {});
-
+	foodItem.issues = issues;
+	if (servingSize === 0) {
+		return foodItem;
+	}
 	const servingQuantity: Quantity = {
 		amount: servingSize,
 		unit: servingSizeUnit,
@@ -96,7 +99,6 @@ function createFoodItem(
 	foodItem.fiber = amountGrams * (fiber / servingSizeGrams);
 
 	foodItem.weight_grams = amountGrams;
-	foodItem.issues = issues;
 	return foodItem;
 }
 
@@ -135,7 +137,7 @@ function validateFrontmatter(
 		fiber: 0,
 	};
 	const servingSize: unknown = frontmatterCache[SERVING_SIZE_FRONTMATTER_KEY];
-	if (!servingSize) {
+	if (servingSize == null) {
 		issues.push('serving size missing');
 	} else if (typeof servingSize !== 'number') {
 		issues.push('serving size must be a number');
@@ -204,7 +206,7 @@ function validateNumber(
 	title: string,
 	issues: string[],
 ): number | null {
-	if (!input) {
+	if (input == null) {
 		issues.push(`${title} missing`);
 	} else if (typeof input !== 'number') {
 		issues.push('${} must be a number');

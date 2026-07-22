@@ -9,6 +9,7 @@
 		fat: number;
 		carbs: number;
 		fiber: number;
+		itemsWithIssues: number;
 	}
 
 	interface Props {
@@ -28,9 +29,17 @@
 				acc.fat += item.fat;
 				acc.carbs += item.carbs;
 				acc.fiber += item.fiber;
+				acc.itemsWithIssues += item.issues.length ? 1 : 0;
 				return acc;
 			},
-			{ calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0 },
+			{
+				calories: 0,
+				protein: 0,
+				fat: 0,
+				carbs: 0,
+				fiber: 0,
+				itemsWithIssues: 0,
+			},
 		);
 		return {
 			calories: Number(summed.calories.toFixed(1)),
@@ -38,9 +47,9 @@
 			fat: Number(summed.fat.toFixed(1)),
 			carbs: Number(summed.carbs.toFixed(1)),
 			fiber: Number(summed.fiber.toFixed(1)),
+			itemsWithIssues: summed.itemsWithIssues,
 		};
 	});
-	//
 </script>
 
 <div class="fooder__macros-view">
@@ -48,8 +57,16 @@
 		<div class="fooder__item">
 			<div class="fooder__calories">
 				<div class="fooder__calories-current">{summary.calories}</div>
-				<div>&nbsp;/ {settings.dailyCalorieTarget}</div>
+				<div>&nbsp;/ {settings.dailyCalorieTarget} kcal</div>
 			</div>
+			{#if summary.itemsWithIssues > 0}
+				<div class="fooder__line-item">
+					<div class="fooder__error-text">
+						{summary.itemsWithIssues}
+						{summary.itemsWithIssues === 1 ? 'item' : 'items'} with issues
+					</div>
+				</div>
+			{/if}
 			<ProgressBar
 				value={summary.calories}
 				max={settings.dailyCalorieTarget}
@@ -98,7 +115,7 @@
 			</div>
 			{#each item.issues as issue, i (i)}
 				<div class="fooder__line-item">
-					<div>{issue}</div>
+					<div class="fooder__error-text">{issue}</div>
 				</div>
 			{/each}
 		{/each}
@@ -152,5 +169,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--size-4-1);
+	}
+	.fooder__error-text {
+		color: var(--text-error) !important;
 	}
 </style>
