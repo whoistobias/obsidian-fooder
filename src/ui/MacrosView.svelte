@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { FooderSettings } from '../settings';
-	import type { FoodItem } from '../types';
+	import type { FoodNode } from '../types';
 	import ProgressBar from './ProgressBar.svelte';
 
 	interface MacrosSummary {
@@ -13,23 +13,26 @@
 	}
 
 	interface Props {
-		items: FoodItem[];
+		nodes: FoodNode[];
 		settings: FooderSettings;
 	}
 
-	let { items, settings }: Props = $props();
+	let { nodes, settings }: Props = $props();
 
 	const emptyMessage = 'Open a recipe note to see linked foods.';
 
 	let summary: MacrosSummary = $derived.by(() => {
-		const summed = items.reduce(
-			(acc, item) => {
-				acc.calories += item.calories;
-				acc.protein += item.protein;
-				acc.fat += item.fat;
-				acc.carbs += item.carbs;
-				acc.fiber += item.fiber;
-				acc.itemsWithIssues += item.issues.length ? 1 : 0;
+		const summed = nodes.reduce(
+			(acc, node) => {
+				if (node.type === 'group') {
+					return acc;
+				}
+				acc.calories += node.item.calories;
+				acc.protein += node.item.protein;
+				acc.fat += node.item.fat;
+				acc.carbs += node.item.carbs;
+				acc.fiber += node.item.fiber;
+				acc.itemsWithIssues += node.item.issues.length ? 1 : 0;
 				return acc;
 			},
 			{
@@ -53,7 +56,7 @@
 </script>
 
 <div class="fooder__macros-view">
-	{#if items.length}
+	{#if nodes.length}
 		<div class="fooder__item">
 			<div class="fooder__calories">
 				<div class="fooder__calories-current">{summary.calories}</div>
@@ -108,16 +111,20 @@
 		</div>
 		<hr />
 		<div class="fooder__section-header">Logged</div>
-		{#each items as item, i (i + item.name)}
-			<div class="fooder__line-item">
-				<div>{item.name} <span>{item.weight_grams}g</span></div>
-				<div>{item.calories} kcal</div>
-			</div>
-			{#each item.issues as issue, i (i)}
+		{#each nodes as node, i (i + (node.type === 'food' ? node.item.name : node.label))}
+			{#if node.type === 'food'}
 				<div class="fooder__line-item">
-					<div class="fooder__error-text">{issue}</div>
+					<div>
+						{node.item.name} <span>{node.item.weight_grams}g</span>
+					</div>
+					<div>{node.item.calories} kcal</div>
 				</div>
-			{/each}
+				{#each node.item.issues as issue, i (i)}
+					<div class="fooder__line-item">
+						<div class="fooder__error-text">{issue}</div>
+					</div>
+				{/each}
+			{/if}
 		{/each}
 	{:else}
 		<p class="fooder-view__empty">{emptyMessage}</p>

@@ -3,6 +3,7 @@ import {
 	TFile,
 	type CachedMetadata,
 	type FrontMatterCache,
+	type HeadingCache,
 } from 'obsidian';
 import {
 	CALORIES_FRONTMATTER_KEY,
@@ -13,6 +14,8 @@ import {
 	SERVING_SIZE_FRONTMATTER_KEY,
 	SERVING_SIZE_UNIT_FRONTMATTER_KEY,
 	type FoodItem,
+	type FoodNode,
+	type GroupNode,
 	type Quantity,
 	type RequiredFrontmatter,
 } from '../types';
@@ -20,15 +23,24 @@ import { FOOD_TAG } from './food';
 import { parseQuantity } from './parse-quantity';
 import { fileHasTag } from './tags';
 import { parseUnit, UNITS } from './units';
+import { getHeadingsForPosition } from './get-headings-for-position';
+import { getListAncestorsForPostition } from './get-list-ancestors-for-position';
 
 export async function getFoodItems(
 	app: App,
 	source_file: TFile,
-): Promise<FoodItem[]> {
+): Promise<FoodNode[]> {
 	const cache = app.metadataCache.getFileCache(source_file);
-	const links = cache?.links ?? [];
-	const items: FoodItem[] = [];
 
+	const listItems = cache?.listItems;
+	const headings = cache?.headings;
+	const links = cache?.links ?? [];
+	const nodes: FoodNode[] = [];
+	const groups: Map<number, Partial<GroupNode>> = new Map();
+
+	const foods: { ancestorLineNumbers: number[]; food: FoodItem }[] = [];
+
+	const v = cache?.headings;
 	for (const link of links) {
 		const file = app.metadataCache.getFirstLinkpathDest(
 			link.link,
@@ -45,10 +57,53 @@ export async function getFoodItems(
 			continue;
 		}
 
-		items.push(createFoodItem(file, cache, link.displayText));
+		const ancestorLineNumbers: number[] = [];
+
+		if (listItems) {
+			const foundListAncestors = getListAncestorsForPostition(
+				listItems,
+				link.position,
+			);
+			for (const listAncestor of foundListAncestors) {
+				ancestorLineNumbers.push(listAncestor.position.start.line);
+			}
+			// const listItem = listItems.find((item) => {
+			// 	return item.position.start.line === link.position.start.line;
+			// });
+
+			// if (listItem) {
+			// 	let parent = listItem.parent;
+			// 	while (parent >= 0) {
+			// 		ancestorLineNumbers.push(listItem.parent);
+			// 		parent =
+			// 			listItems.find(
+			// 				(item) => item.position.start.line === parent,
+			// 			)?.parent || -1;
+			// 	}
+			// }
+		}
+
+		if (headings) {
+			let foundHeadings = getHeadingsForPosition(headings, link.position);
+			for (const heading of foundHeadings) {
+				ancestorLineNumbers.push(heading.position.start.line);
+			}
+		}
+
+		foods.push({
+			ancestorLineNumbers,
+			food: createFoodItem(file, cache, link.displayText),
+		});
 	}
 
-	return items;
+	for (const foodItem of foods) {
+		nodes.push({
+			item: foodItem.food,
+			type: 'food',
+		});
+	}
+
+	return nodes;
 }
 
 function createFoodItem(

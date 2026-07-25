@@ -5,6 +5,7 @@ import {
 	type FooderSettings,
 } from './settings';
 import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
+import { FOOD_TAG } from './utils/food';
 import { RECIPE_TAG } from './utils/recipe';
 import { fileHasTag } from './utils/tags';
 import { ensureFoodBase } from './base/food-base';
@@ -23,12 +24,6 @@ export default class FooderPlugin extends Plugin {
 		);
 
 		await this.reconcileExistingFooderLeaves();
-
-		this.registerEvent(
-			this.app.workspace.on('active-leaf-change', () => {
-				void this.syncFooderView();
-			}),
-		);
 
 		this.registerEvent(
 			this.app.workspace.on('file-open', () => {
@@ -175,17 +170,51 @@ export default class FooderPlugin extends Plugin {
 		modifiedFile: TFile,
 	): Promise<void> {
 		const activeFile = this.getActiveRecipeFile();
-		if (!activeFile || modifiedFile.path !== activeFile.path) {
+		if (!activeFile) {
+			return;
+		}
+
+		if (
+			modifiedFile.path !== activeFile.path &&
+			!this.recipeLinksFoodFile(activeFile, modifiedFile)
+		) {
 			return;
 		}
 
 		const fooderView = this.getFooderView();
 		if (fooderView) {
-			await fooderView.updateForFile(activeFile);
+			await fooderView.updateForFile(activeFile, { force: true });
 			return;
 		}
 
 		await this.syncFooderView();
+	}
+
+	private recipeLinksFoodFile(
+		recipeFile: TFile,
+		linkedFile: TFile,
+	): boolean {
+		const linkedFileCache =
+			this.app.metadataCache.getFileCache(linkedFile);
+		if (
+			!linkedFileCache ||
+			!fileHasTag(linkedFileCache, `#${FOOD_TAG}`)
+		) {
+			return false;
+		}
+
+		const recipeCache = this.app.metadataCache.getFileCache(recipeFile);
+		if (!recipeCache?.links) {
+			return false;
+		}
+
+		return recipeCache.links.some((link) => {
+			const destination = this.app.metadataCache.getFirstLinkpathDest(
+				link.link,
+				recipeFile.path,
+			);
+			return destination?.path === linkedFile.path;
+		});
 	}
 
 	private async activateFooderView(): Promise<void> {

@@ -24,6 +24,18 @@ export interface FoodItem {
 	issues: string[];
 }
 
+export interface GroupNode {
+	type: 'group';
+	label: string;
+	children: FoodNode[];
+}
+export interface ItemNode {
+	type: 'food';
+	item: FoodItem;
+}
+
+export type FoodNode = GroupNode | ItemNode;
+
 export interface Quantity {
 	amount: number;
 	unit: UnitOfMeasure;

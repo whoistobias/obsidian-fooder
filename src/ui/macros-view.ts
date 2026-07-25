@@ -12,10 +12,15 @@ import type MacrosView from './MacrosView.svelte';
 
 export const VIEW_TYPE_FOODER = 'fooder-view';
 
+interface UpdateForFileOptions {
+	force?: boolean;
+}
+
 export class FooderView extends ItemView {
 	private viewProps: FooderViewProps | undefined;
 	private svelteComponent: ReturnType<typeof MacrosView> | undefined;
 	private pendingFile: TFile | null | undefined;
+	private loadedFilePath: string | null = null;
 
 	constructor(
 		leaf: WorkspaceLeaf,
@@ -65,18 +70,27 @@ export class FooderView extends ItemView {
 		this.pendingFile = undefined;
 	}
 
-	async updateForFile(file: TFile | null): Promise<void> {
+	async updateForFile(
+		file: TFile | null,
+		options: UpdateForFileOptions = {},
+	): Promise<void> {
 		if (!this.viewProps) {
 			this.pendingFile = file;
 			return;
 		}
 
 		if (!file) {
-			this.viewProps.items = [];
+			this.loadedFilePath = null;
+			this.viewProps.nodes = [];
 			return;
 		}
 
-		this.viewProps.items = await getFoodItems(this.app, file);
+		if (!options.force && file.path === this.loadedFilePath) {
+			return;
+		}
+
+		this.loadedFilePath = file.path;
+		this.viewProps.nodes = await getFoodItems(this.app, file);
 	}
 
 	updateSettings(settings: FooderSettings): void {

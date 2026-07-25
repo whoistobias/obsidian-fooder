@@ -1,9 +1,9 @@
 import type { FooderSettings } from '../settings';
-import type { FoodItem } from '../types';
+import type { FoodNode } from '../types';
 
 export function createFooderViewProps(initial: { settings: FooderSettings }) {
 	const props = $state({
-		items: [] as FoodItem[],
+		nodes: [] as FoodNode[],
 		settings: { ...initial.settings },
 	});
 
