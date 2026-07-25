@@ -1,1 +1,1 @@
-export const FOOD_TAG = '#food';
+export const FOOD_TAG = 'food';

@@ -41,7 +41,7 @@ export async function getFoodItems(
 		if (!cache) {
 			continue;
 		}
-		if (!fileHasTag(cache, FOOD_TAG)) {
+		if (!fileHasTag(cache, `#${FOOD_TAG}`)) {
 			continue;
 		}
 

@@ -7,6 +7,8 @@ import {
 import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
 import { RECIPE_TAG } from './utils/recipe';
 import { fileHasTag } from './utils/tags';
+import { ensureFoodBase } from './base/food-base';
+import { getLeafForFile } from './utils/get-leaf-for-file';
 
 export default class FooderPlugin extends Plugin {
 	settings!: FooderSettings;
@@ -51,6 +53,26 @@ export default class FooderPlugin extends Plugin {
 			name: 'Show linked foods',
 			callback: () => {
 				void this.activateFooderView();
+			},
+		});
+
+		this.addCommand({
+			id: 'setup-food-base',
+			name: 'Set up food base',
+			callback: async () => {
+				const base = await ensureFoodBase(this.app);
+				let leaf = getLeafForFile(this.app, base);
+
+				if (leaf) {
+					this.app.workspace.setActiveLeaf(leaf, { focus: true });
+					return;
+				}
+
+				leaf = this.app.workspace.getMostRecentLeaf();
+				if (leaf === null) {
+					leaf = this.app.workspace.getLeaf();
+				}
+				await leaf.openFile(base);
 			},
 		});
 
