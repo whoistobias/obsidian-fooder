@@ -24,10 +24,21 @@ export interface FoodItem {
 	issues: string[];
 }
 
+export interface MacroTotals {
+	calories: number;
+	protein: number;
+	fat: number;
+	carbs: number;
+	fiber: number;
+	weight_grams: number;
+	itemsWithIssues: number;
+}
+
 export interface GroupNode {
 	type: 'group';
 	label: string;
 	children: FoodNode[];
+	totals: MacroTotals;
 }
 export interface ItemNode {
 	type: 'food';

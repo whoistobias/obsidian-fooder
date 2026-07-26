@@ -3,7 +3,6 @@ import {
 	TFile,
 	type CachedMetadata,
 	type FrontMatterCache,
-	type HeadingCache,
 } from 'obsidian';
 import {
 	CALORIES_FRONTMATTER_KEY,
@@ -15,16 +14,16 @@ import {
 	SERVING_SIZE_UNIT_FRONTMATTER_KEY,
 	type FoodItem,
 	type FoodNode,
-	type GroupNode,
 	type Quantity,
 	type RequiredFrontmatter,
 } from '../types';
+import { buildFoodNodes, type FoodWithAncestors } from './build-food-nodes';
 import { FOOD_TAG } from './food';
+import { getHeadingsForPosition } from './get-headings-for-position';
+import { getListAncestorsForPostition } from './get-list-ancestors-for-position';
 import { parseQuantity } from './parse-quantity';
 import { fileHasTag } from './tags';
 import { parseUnit, UNITS } from './units';
-import { getHeadingsForPosition } from './get-headings-for-position';
-import { getListAncestorsForPostition } from './get-list-ancestors-for-position';
 
 export async function getFoodItems(
 	app: App,
@@ -35,12 +34,8 @@ export async function getFoodItems(
 	const listItems = cache?.listItems;
 	const headings = cache?.headings;
 	const links = cache?.links ?? [];
-	const nodes: FoodNode[] = [];
-	const groups: Map<number, Partial<GroupNode>> = new Map();
+	const foods: FoodWithAncestors[] = [];
 
-	const foods: { ancestorLineNumbers: number[]; food: FoodItem }[] = [];
-
-	const v = cache?.headings;
 	for (const link of links) {
 		const file = app.metadataCache.getFirstLinkpathDest(
 			link.link,
@@ -67,24 +62,10 @@ export async function getFoodItems(
 			for (const listAncestor of foundListAncestors) {
 				ancestorLineNumbers.push(listAncestor.position.start.line);
 			}
-			// const listItem = listItems.find((item) => {
-			// 	return item.position.start.line === link.position.start.line;
-			// });
-
-			// if (listItem) {
-			// 	let parent = listItem.parent;
-			// 	while (parent >= 0) {
-			// 		ancestorLineNumbers.push(listItem.parent);
-			// 		parent =
-			// 			listItems.find(
-			// 				(item) => item.position.start.line === parent,
-			// 			)?.parent || -1;
-			// 	}
-			// }
 		}
 
 		if (headings) {
-			let foundHeadings = getHeadingsForPosition(headings, link.position);
+			const foundHeadings = getHeadingsForPosition(headings, link.position);
 			for (const heading of foundHeadings) {
 				ancestorLineNumbers.push(heading.position.start.line);
 			}
@@ -96,14 +77,8 @@ export async function getFoodItems(
 		});
 	}
 
-	for (const foodItem of foods) {
-		nodes.push({
-			item: foodItem.food,
-			type: 'food',
-		});
-	}
-
-	return nodes;
+	const sourceText = await app.vault.cachedRead(source_file);
+	return buildFoodNodes(foods, sourceText, headings, listItems);
 }
 
 function createFoodItem(
