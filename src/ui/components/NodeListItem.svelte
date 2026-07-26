@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { slide } from 'svelte/transition';
 	import type { FoodNode } from '../../types';
 	import { icon } from '../attachments/icon';
 	import ListItem from './ListItem.svelte';
@@ -11,32 +12,45 @@
 
 	let { node, depth = 0 }: Props = $props();
 
+	let expanded = $state(true);
+
 	function nodeKey(child: FoodNode): string {
 		return child.type === 'food' ? child.item.name : child.label;
+	}
+
+	function toggleExpanded() {
+		expanded = !expanded;
 	}
 </script>
 
 {#if node.type === 'group'}
 	<div>
-		<ListItem {depth}>
+		<ListItem {depth} onclick={toggleExpanded}>
 			<div
-				class="-ml-5 size-4 self-center text-nav-collapse-icon stroke-2"
+				class="flex items-center justify-center -ml-5 size-4 [&_svg]:size-3.75 self-center text-nav-collapse-icon [&_svg]:stroke-[2.5] transition-transform duration-200"
+				class:-rotate-90={!expanded}
 				{@attach icon('chevron-down')}
 			></div>
 			<div class="">{node.label}</div>
 			<div class="flex-1"></div>
-			<div class="text-ui-smaller opacity-0 group-hover:opacity-100">
+			<div
+				class="text-ui-smaller text-faint group-hover:text-normal group-hover:opacity-100"
+				class:opacity-0={expanded}
+				class:opacity-100={!expanded}
+			>
 				{node.totals.calories} kcal
 			</div>
 		</ListItem>
-		<div
-			class="border-l border-indentation-guide ml-[12px]"
-			style:margin-left="calc({depth + 1} *12px)"
-		>
-			{#each node.children as child, i (i + nodeKey(child))}
-				<Self node={child} depth={depth + 1} />
-			{/each}
-		</div>
+		{#if expanded}
+			<div
+				transition:slide={{ duration: 200 }}
+				class="border-l-[0.666px] border-indentation-guide pl-1 ml-3"
+			>
+				{#each node.children as child, i (i + nodeKey(child))}
+					<Self node={child} depth={depth + 1} />
+				{/each}
+			</div>
+		{/if}
 	</div>
 {:else}
 	<ListItem {depth}>
