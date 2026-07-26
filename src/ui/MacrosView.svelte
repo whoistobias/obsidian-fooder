@@ -58,7 +58,7 @@
 	});
 </script>
 
-<div class="flex flex-col gap-3">
+<div class="flex flex-col">
 	{#if nodes.length}
 		<div class="flex flex-col gap-1">
 			<div class="flex items-baseline">
@@ -125,17 +125,16 @@
 			/>
 		</div>
 		<hr />
-		<div class="text-muted text-ui-smaller">Logged</div>
 		{#snippet renderNodes(foodNodes: FoodNode[], depth: number)}
 			{#each foodNodes as node, i (i + (node.type === 'food' ? node.item.name : node.label))}
 				{#if node.type === 'group'}
 					<div
-						class="flex justify-between items-baseline text-muted text-ui-smaller group"
+						class="flex justify-between items-baseline text-muted text-ui-small group hover:text-normal hover:bg-background-modifier-hover p-(--nav-item-padding) rounded-(--radius-s)"
 						style:padding-left="{depth * 0.75}rem"
 					>
 						<div>{node.label}</div>
 						<div
-							class="text-ui-smaller opacity-0 transition-opacity group-hover:opacity-100"
+							class="text-ui-smaller opacity-0 group-hover:opacity-100"
 						>
 							{node.totals.calories} kcal
 						</div>
@@ -143,14 +142,18 @@
 					{@render renderNodes(node.children, depth + 1)}
 				{:else}
 					<div
-						class="flex justify-between items-baseline"
-						style:padding-left="{depth * 0.75}rem"
+						class="flex group justify-between text-muted text-ui-small items-baseline hover:text-normal hover:bg-background-modifier-hover p-(--nav-item-padding) rounded-(--radius-s)"
 					>
-						<div class="text-ui-smaller">
+						<!-- style:padding-left="{depth * 0.75}rem" -->
+						<div>
 							{node.item.name}
-							<span>{node.item.weight_grams}g</span>
+							<span class="text-ui-smaller text-faint"
+								>{node.item.weight_grams}g</span
+							>
 						</div>
-						<div class="text-ui-smaller text-faint">
+						<div
+							class="text-ui-smaller text-faint group-hover:text-normal"
+						>
 							{node.item.calories} kcal
 						</div>
 					</div>

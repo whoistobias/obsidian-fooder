@@ -17,7 +17,7 @@
 	);
 </script>
 
-<div class="flex h-1 bg-modifier-border rounded-xs overflow-hidden">
+<div class="flex h-1 bg-background-modifier-border rounded-xs overflow-hidden">
 	<div
 		class="rounded-xs shrink"
 		style="width: {percent}%; background-color: {color};"

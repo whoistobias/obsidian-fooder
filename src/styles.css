@@ -22,9 +22,13 @@
 	--color-muted: var(--text-muted);
 	--color-faint: var(--text-faint);
 	--color-error: var(--text-error);
-	--color-modifier-border: var(--background-modifier-border);
+	--color-normal: var(--text-normal);
+
+	--color-background-modifier-border: var(--background-modifier-border);
+	--color-background-modifier-hover: var(--background-modifier-hover);
 
 	--text-ui-smaller: var(--font-ui-smaller);
+	--text-ui-small: var(--font-ui-small);
 	--text-ui-large: var(--font-ui-large);
 
 	--spacing-1: var(--size-4-1);
