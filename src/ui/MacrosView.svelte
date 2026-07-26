@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { FooderSettings } from '../settings';
 	import type { FoodNode } from '../types';
+	import { formatKcal } from '../utils/format-kcal';
 	import NodeListItem from './components/NodeListItem.svelte';
 	import ProgressBar from './components/ProgressBar.svelte';
 
@@ -61,69 +62,72 @@
 
 <div class="flex flex-col gap-2-1">
 	{#if nodes.length}
-		<div class="flex flex-col gap-1">
-			<div class="flex items-baseline">
-				<div class="text-ui-large">
-					{summary.calories}
-				</div>
-				<div class="text-muted">
-					&nbsp;/ {settings.dailyCalorieTarget} kcal
-				</div>
-			</div>
-			{#if summary.itemsWithIssues > 0}
-				<div
-					class="flex justify-between items-baseline last:text-faint last:text-ui-smaller"
-				>
-					<div class="text-error!">
-						{summary.itemsWithIssues}
-						{summary.itemsWithIssues === 1 ? 'item' : 'items'} with issues
+		<div class="flex flex-col gap-4">
+			<div class="flex flex-col gap-1">
+				<div class="flex items-baseline">
+					<div class="text-ui-large">
+						{summary.calories}
+					</div>
+					<div class="text-muted">
+						&nbsp;/ {settings.dailyCalorieTarget} kcal
 					</div>
 				</div>
-			{/if}
-			<ProgressBar
-				value={summary.calories}
-				max={settings.dailyCalorieTarget}
-				color="#c3c2b7"
-			/>
-		</div>
-		<div class="flex flex-col gap-1">
-			<div class="flex justify-between items-baseline">
-				<div class="text-muted">protein</div>
-				<div class="text-faint">
-					{summary.protein} / {settings.dailyProteinTarget}
-				</div>
+				{#if summary.itemsWithIssues > 0}
+					<div
+						class="flex justify-between items-baseline last:text-faint last:text-ui-smaller"
+					>
+						<div class="text-error!">
+							{summary.itemsWithIssues}
+							{summary.itemsWithIssues === 1 ? 'item' : 'items'} with
+							issues
+						</div>
+					</div>
+				{/if}
+				<ProgressBar
+					value={summary.calories}
+					max={settings.dailyCalorieTarget}
+					color="#c3c2b7"
+				/>
 			</div>
-			<ProgressBar
-				value={summary.protein}
-				max={settings.dailyProteinTarget}
-				color="#0f6e56"
-			/>
-		</div>
-		<div class="flex flex-col gap-1">
-			<div class="flex justify-between items-baseline">
-				<div class="text-muted">carbs</div>
-				<div class="text-faint">
-					{summary.carbs} / {settings.dailyCarbsTarget}
+			<div class="flex flex-col gap-1">
+				<div class="flex justify-between items-baseline">
+					<div class="text-muted">protein</div>
+					<div class="text-faint">
+						{summary.protein} / {settings.dailyProteinTarget}
+					</div>
 				</div>
+				<ProgressBar
+					value={summary.protein}
+					max={settings.dailyProteinTarget}
+					color="#0f6e56"
+				/>
 			</div>
-			<ProgressBar
-				value={summary.carbs}
-				max={settings.dailyCarbsTarget}
-				color="#185fa5"
-			/>
-		</div>
-		<div class="flex flex-col gap-1">
-			<div class="flex justify-between items-baseline">
-				<div class="text-muted">fat</div>
-				<div class="text-faint">
-					{summary.fat} / {settings.dailyFatTarget}
+			<div class="flex flex-col gap-1">
+				<div class="flex justify-between items-baseline">
+					<div class="text-muted">carbs</div>
+					<div class="text-faint">
+						{summary.carbs} / {settings.dailyCarbsTarget}
+					</div>
 				</div>
+				<ProgressBar
+					value={summary.carbs}
+					max={settings.dailyCarbsTarget}
+					color="#185fa5"
+				/>
 			</div>
-			<ProgressBar
-				value={summary.fat}
-				max={settings.dailyFatTarget}
-				color="#854f0b"
-			/>
+			<div class="flex flex-col gap-1">
+				<div class="flex justify-between items-baseline">
+					<div class="text-muted">fat</div>
+					<div class="text-faint">
+						{summary.fat} / {settings.dailyFatTarget}
+					</div>
+				</div>
+				<ProgressBar
+					value={summary.fat}
+					max={settings.dailyFatTarget}
+					color="#854f0b"
+				/>
+			</div>
 		</div>
 		<hr />
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import type { FoodNode } from '../../types';
+	import { formatKcal } from '../../utils/format-kcal';
 	import { icon } from '../attachments/icon';
 	import ListItem from './ListItem.svelte';
 	import Self from './NodeListItem.svelte';
@@ -45,7 +46,7 @@
 </script>
 
 {#if node.type === 'group'}
-	{@const bleedDepth = maxRenderDepth(node, depth) - depth}
+	{@const bleedDepth = maxRenderDepth(node, depth)}
 	<div>
 		<ListItem {depth} onclick={toggleExpanded}>
 			<div
@@ -60,7 +61,7 @@
 				class:opacity-0={expanded}
 				class:opacity-100={!expanded}
 			>
-				{node.totals.calories} kcal
+				{formatKcal(node.totals.calories)} kcal
 			</div>
 		</ListItem>
 		{#if expanded}
@@ -88,7 +89,7 @@
 			>
 		</div>
 		<div class="text-ui-smaller text-faint group-hover:text-normal">
-			{node.item.calories} kcal
+			{formatKcal(node.item.calories)} kcal
 		</div>
 	</ListItem>
 	{#each node.item.issues as issue, issueIndex (issueIndex)}
