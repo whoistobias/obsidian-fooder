@@ -12,10 +12,31 @@
 
 	let { node, depth = 0 }: Props = $props();
 
+	const indentStep = '16px + 0.666px';
+
 	let expanded = $state(true);
 
 	function nodeKey(child: FoodNode): string {
 		return child.type === 'food' ? child.item.name : child.label;
+	}
+
+	function maxRenderDepth(
+		group: Extract<FoodNode, { type: 'group' }>,
+		groupDepth: number,
+	): number {
+		let max = groupDepth;
+
+		for (const child of group.children) {
+			const childDepth = groupDepth + 1;
+			max = Math.max(
+				max,
+				child.type === 'group'
+					? maxRenderDepth(child, childDepth)
+					: childDepth,
+			);
+		}
+
+		return max;
 	}
 
 	function toggleExpanded() {
@@ -24,6 +45,7 @@
 </script>
 
 {#if node.type === 'group'}
+	{@const bleedDepth = maxRenderDepth(node, depth) - depth}
 	<div>
 		<ListItem {depth} onclick={toggleExpanded}>
 			<div
@@ -44,11 +66,16 @@
 		{#if expanded}
 			<div
 				transition:slide={{ duration: 200 }}
-				class="border-l-[0.666px] border-indentation-guide pl-1 ml-3"
+				style:padding-left="calc({bleedDepth} * ({indentStep}))"
+				style:margin-left="calc(-{bleedDepth} * ({indentStep}))"
 			>
-				{#each node.children as child, i (i + nodeKey(child))}
-					<Self node={child} depth={depth + 1} />
-				{/each}
+				<div
+					class="border-l-[0.666px] border-indentation-guide pl-1 ml-3"
+				>
+					{#each node.children as child, i (i + nodeKey(child))}
+						<Self node={child} depth={depth + 1} />
+					{/each}
+				</div>
 			</div>
 		{/if}
 	</div>
