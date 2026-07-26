@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { FooderSettings } from '../settings';
 	import type { FoodNode } from '../types';
-	import ProgressBar from './ProgressBar.svelte';
+	import NodeListItem from './components/NodeListItem.svelte';
+	import ProgressBar from './components/ProgressBar.svelte';
 
 	interface MacrosSummary {
 		calories: number;
@@ -58,7 +59,7 @@
 	});
 </script>
 
-<div class="flex flex-col">
+<div class="flex flex-col gap-2-1">
 	{#if nodes.length}
 		<div class="flex flex-col gap-1">
 			<div class="flex items-baseline">
@@ -125,50 +126,10 @@
 			/>
 		</div>
 		<hr />
-		{#snippet renderNodes(foodNodes: FoodNode[], depth: number)}
-			{#each foodNodes as node, i (i + (node.type === 'food' ? node.item.name : node.label))}
-				{#if node.type === 'group'}
-					<div
-						class="flex justify-between items-baseline text-muted text-ui-small group hover:text-normal hover:bg-background-modifier-hover p-(--nav-item-padding) rounded-(--radius-s)"
-						style:padding-left="{depth * 0.75}rem"
-					>
-						<div>{node.label}</div>
-						<div
-							class="text-ui-smaller opacity-0 group-hover:opacity-100"
-						>
-							{node.totals.calories} kcal
-						</div>
-					</div>
-					{@render renderNodes(node.children, depth + 1)}
-				{:else}
-					<div
-						class="flex group justify-between text-muted text-ui-small items-baseline hover:text-normal hover:bg-background-modifier-hover p-(--nav-item-padding) rounded-(--radius-s)"
-					>
-						<!-- style:padding-left="{depth * 0.75}rem" -->
-						<div>
-							{node.item.name}
-							<span class="text-ui-smaller text-faint"
-								>{node.item.weight_grams}g</span
-							>
-						</div>
-						<div
-							class="text-ui-smaller text-faint group-hover:text-normal"
-						>
-							{node.item.calories} kcal
-						</div>
-					</div>
-					{#each node.item.issues as issue, issueIndex (issueIndex)}
-						<div
-							class="flex justify-between items-baseline last:text-faint last:text-ui-smaller"
-							style:padding-left="{(depth + 1) * 0.75}rem"
-						>
-							<div class="text-error!">{issue}</div>
-						</div>
-					{/each}
-				{/if}
-			{/each}
-		{/snippet}
-		{@render renderNodes(nodes, 0)}
+
+		{#each nodes as node, i (i + (node.type === 'food' ? node.item.name : node.label))}
+			<NodeListItem {node} />
+		{/each}
 	{:else}
 		<p class="fooder-view__empty">{emptyMessage}</p>
 	{/if}

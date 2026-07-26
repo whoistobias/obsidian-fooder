@@ -11,8 +11,7 @@
  * Avoid scanning components whose <style> blocks contain CSS props like
  * `transition` / `flex-shrink`, which Tailwind would treat as utility classes.
  */
-@source './ui/MacrosView.svelte';
-@source './ui/ProgressBar.svelte';
+@source './ui/**/*';
 
 /*
  * inline: utilities emit var(--text-faint) etc. directly instead of depending on
@@ -23,7 +22,8 @@
 	--color-faint: var(--text-faint);
 	--color-error: var(--text-error);
 	--color-normal: var(--text-normal);
-
+	--color-indentation-guide: var(--indentation-guide-color);
+	--color-nav-collapse-icon: var(--nav-collapse-icon-color);
 	--color-background-modifier-border: var(--background-modifier-border);
 	--color-background-modifier-hover: var(--background-modifier-hover);
 
@@ -32,5 +32,8 @@
 	--text-ui-large: var(--font-ui-large);
 
 	--spacing-1: var(--size-4-1);
+	--spacing-2: var(--size-4-2);
 	--spacing-3: var(--size-4-3);
+	--spacing-4: var(--size-4-4);
+	--spacing-2-1: var(--size-2-1);
 }
