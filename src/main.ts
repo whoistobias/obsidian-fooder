@@ -48,7 +48,15 @@ export default class FooderPlugin extends Plugin {
 			id: 'show-linked-foods',
 			name: 'Show linked foods',
 			callback: () => {
-				void this.activateFooderView();
+				void this.ensureFooderView();
+			},
+		});
+
+		this.addCommand({
+			id: 'show-macros',
+			name: 'Show macros',
+			callback: () => {
+				void this.openMacrosView();
 			},
 		});
 
@@ -156,11 +164,10 @@ export default class FooderPlugin extends Plugin {
 
 	private async syncFooderView(): Promise<void> {
 		const file = this.getActiveRecipeFile();
-		if (!file) {
-			return;
-		}
 
-		await this.activateFooderView();
+		if (file) {
+			await this.ensureFooderView();
+		}
 
 		for (const view of this.getFooderViews()) {
 			await view.updateForFile(file);
@@ -218,9 +225,9 @@ export default class FooderPlugin extends Plugin {
 		});
 	}
 
-	private async activateFooderView(): Promise<void> {
+	private async ensureFooderView(): Promise<void> {
 		if (!this.fooderViewActivation) {
-			this.fooderViewActivation = this.openFooderView().finally(() => {
+			this.fooderViewActivation = this.createFooderViewLeaf().finally(() => {
 				this.fooderViewActivation = null;
 			});
 		}
@@ -228,7 +235,16 @@ export default class FooderPlugin extends Plugin {
 		await this.fooderViewActivation;
 	}
 
-	private async openFooderView(): Promise<void> {
+	private async openMacrosView(): Promise<void> {
+		await this.ensureFooderView();
+
+		const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)[0];
+		if (leaf) {
+			void this.app.workspace.revealLeaf(leaf);
+		}
+	}
+
+	private async createFooderViewLeaf(): Promise<void> {
 		const { workspace } = this.app;
 		const leaves = workspace.getLeavesOfType(VIEW_TYPE_FOODER);
 
@@ -246,15 +262,13 @@ export default class FooderPlugin extends Plugin {
 
 			await leaf.setViewState({
 				type: VIEW_TYPE_FOODER,
-				active: true,
+				active: false,
 			});
 		} else if (leaf.view.getViewType() !== VIEW_TYPE_FOODER) {
 			await leaf.setViewState({
 				type: VIEW_TYPE_FOODER,
-				active: true,
+				active: false,
 			});
 		}
-
-		void workspace.revealLeaf(leaf);
 	}
 }

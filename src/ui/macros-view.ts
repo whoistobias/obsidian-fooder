@@ -38,7 +38,7 @@ export class FooderView extends ItemView {
 	}
 
 	getIcon(): string {
-		return 'carrot';
+		return 'salad';
 	}
 
 	async onOpen(): Promise<void> {
