@@ -17,35 +17,10 @@
 	);
 </script>
 
-<div class="fooder__progress-bar">
+<div class="flex h-1 bg-modifier-border rounded-xs overflow-hidden">
 	<div
-		class="fooder__progress-bar__fill fooder__progress-bar__fill-main"
+		class="rounded-xs shrink"
 		style="width: {percent}%; background-color: {color};"
 	></div>
-	<div
-		class="fooder__progress-bar__fill fooder__progress-bar__fill-overflow"
-		style="width: {overflow}%"
-	></div>
+	<div class="rounded-xs bg-[#b13132]" style="width: {overflow}%"></div>
 </div>
-
-<style>
-	.fooder__progress-bar {
-		height: 4px;
-		background-color: var(--background-modifier-border);
-		border-radius: 2px;
-		overflow: hidden;
-		display: flex;
-	}
-
-	.fooder__progress-bar__fill {
-		height: 100%;
-		border-radius: 2px;
-		transition: width 0.2s ease;
-	}
-	.fooder__progress-bar__fill-main {
-		flex-shrink: 1;
-	}
-	.fooder__progress-bar__fill-overflow {
-		background-color: #b13132;
-	}
-</style>

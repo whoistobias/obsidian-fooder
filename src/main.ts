@@ -1,15 +1,16 @@
 import { MarkdownView, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
+import { ensureFoodBase } from './base/food-base';
 import {
 	DEFAULT_SETTINGS,
 	FooderSettingTab,
 	type FooderSettings,
 } from './settings';
+import './styles.css';
 import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
 import { FOOD_TAG } from './utils/food';
+import { getLeafForFile } from './utils/get-leaf-for-file';
 import { RECIPE_TAG } from './utils/recipe';
 import { fileHasTag } from './utils/tags';
-import { ensureFoodBase } from './base/food-base';
-import { getLeafForFile } from './utils/get-leaf-for-file';
 
 export default class FooderPlugin extends Plugin {
 	settings!: FooderSettings;

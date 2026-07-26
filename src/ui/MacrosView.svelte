@@ -135,7 +135,7 @@
 					>
 						<div>{node.label}</div>
 						<div
-							class="text-ui-smaller opacity-0 transition-opacity group-hover:opacity-1"
+							class="text-ui-smaller opacity-0 transition-opacity group-hover:opacity-100"
 						>
 							{node.totals.calories} kcal
 						</div>
@@ -159,7 +159,7 @@
 							class="flex justify-between items-baseline last:text-faint last:text-ui-smaller"
 							style:padding-left="{(depth + 1) * 0.75}rem"
 						>
-							<div class="fooder__error-text">{issue}</div>
+							<div class="text-error!">{issue}</div>
 						</div>
 					{/each}
 				{/if}
@@ -170,51 +170,3 @@
 		<p class="fooder-view__empty">{emptyMessage}</p>
 	{/if}
 </div>
-
-<style>
-	.flex {
-		display: flex;
-	}
-	.flex-col {
-		flex-direction: column;
-	}
-
-	.gap-3 {
-		gap: var(--size-4-3);
-	}
-	.gap-1 {
-		gap: var(--size-4-1);
-	}
-	.justify-between {
-		justify-content: space-between;
-	}
-	.items-baseline {
-		align-items: baseline;
-	}
-	.text-faint,
-	.last\:text-faint:last-child {
-		color: var(--text-faint);
-	}
-	.text-ui-large {
-		font-size: var(--font-ui-smaller);
-	}
-	.text-muted {
-		color: var(--text-muted);
-	}
-	.text-error\! {
-		color: var(--text-error) !important;
-	}
-	.text-ui-smaller,
-	.last\:text-ui-smaller:last-child {
-		font-size: var(--font-ui-smaller);
-	}
-	.opacity-0 {
-		opacity: 0;
-	}
-	.transition-opacity {
-		transition: opacity 0.12s ease;
-	}
-	.group:hover .group-hover\:opacity-1 {
-		opacity: 1;
-	}
-</style>

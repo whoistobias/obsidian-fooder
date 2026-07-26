@@ -1,0 +1,32 @@
+/*
+ * Obsidian-safe Tailwind: theme + utilities only (no Preflight).
+ * Utilities are unlayered + important so they can override Obsidian’s
+ * unlayered app CSS (layered utilities lose to unlayered rules).
+ */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' source(none) important;
+
+/*
+ * Explicit template sources only (source(none) above disables project-wide scan).
+ * Avoid scanning components whose <style> blocks contain CSS props like
+ * `transition` / `flex-shrink`, which Tailwind would treat as utility classes.
+ */
+@source './ui/MacrosView.svelte';
+@source './ui/ProgressBar.svelte';
+
+/*
+ * inline: utilities emit var(--text-faint) etc. directly instead of depending on
+ * @theme :root variables (those often don't apply in Obsidian’s plugin CSS).
+ */
+@theme inline {
+	--color-muted: var(--text-muted);
+	--color-faint: var(--text-faint);
+	--color-error: var(--text-error);
+	--color-modifier-border: var(--background-modifier-border);
+
+	--text-ui-smaller: var(--font-ui-smaller);
+	--text-ui-large: var(--font-ui-large);
+
+	--spacing-1: var(--size-4-1);
+	--spacing-3: var(--size-4-3);
+}
