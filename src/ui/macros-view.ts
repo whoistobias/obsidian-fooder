@@ -90,7 +90,11 @@ export class FooderView extends ItemView {
 		}
 
 		this.loadedFilePath = file.path;
-		this.viewProps.nodes = await getFoodItems(this.app, file);
+		this.viewProps.nodes = await getFoodItems(
+			this.app,
+			file,
+			this.plugin.settings,
+		);
 	}
 
 	updateSettings(settings: FooderSettings): void {

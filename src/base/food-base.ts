@@ -1,32 +1,26 @@
 import { App, Notice, TFile } from 'obsidian';
+import { type FooderSettings } from '../settings';
 import { FOOD_TAG } from '../utils/food';
-import {
-	CALORIES_FRONTMATTER_KEY,
-	PROTEIN_FRONTMATTER_KEY,
-	CARBS_FRONTMATTER_KEY,
-	FAT_FRONTMATTER_KEY,
-	FIBER_FRONTMATTER_KEY,
-	SERVING_SIZE_FRONTMATTER_KEY,
-} from '../types';
 
 export const FOOD_BASE_PATH = 'Foods.base';
 
-const FOOD_BASE_CONTENT = `filters:
+export function buildFoodBaseContent(settings: FooderSettings): string {
+    return `filters:
   and:
     - file.hasTag("${FOOD_TAG}")
 
 properties:
-  note.${CALORIES_FRONTMATTER_KEY}:
+  note.${settings.caloriesProperty}:
     displayName: Calories
-  note.${PROTEIN_FRONTMATTER_KEY}:
+  note.${settings.proteinProperty}:
     displayName: Protein
-  note.${CARBS_FRONTMATTER_KEY}:
+  note.${settings.carbsProperty}:
     displayName: Carbs
-  note.${FAT_FRONTMATTER_KEY}:
+  note.${settings.fatProperty}:
     displayName: Fat
-  note.${FIBER_FRONTMATTER_KEY}:
+  note.${settings.fiberProperty}:
     displayName: Fiber
-  note.${SERVING_SIZE_FRONTMATTER_KEY}:
+  note.${settings.servingSizeProperty}:
     displayName: Serving size
 
 views:
@@ -34,22 +28,74 @@ views:
     name: "All foods"
     order:
       - file.name
-      - ${CALORIES_FRONTMATTER_KEY}
-      - ${PROTEIN_FRONTMATTER_KEY}
-      - ${CARBS_FRONTMATTER_KEY}
-      - ${FAT_FRONTMATTER_KEY}
-      - ${FIBER_FRONTMATTER_KEY}
-      - ${SERVING_SIZE_FRONTMATTER_KEY}
+      - ${settings.caloriesProperty}
+      - ${settings.proteinProperty}
+      - ${settings.carbsProperty}
+      - ${settings.fatProperty}
+      - ${settings.fiberProperty}
+      - ${settings.servingSizeProperty}
 `;
+}
 
-export async function ensureFoodBase(app: App): Promise<TFile> {
-	const existing = app.vault.getAbstractFileByPath(FOOD_BASE_PATH);
-	if (existing instanceof TFile) {
-		new Notice('Food base already exists.');
-		return existing;
-	}
+export async function ensureFoodBase(
+    app: App,
+    settings: FooderSettings,
+): Promise<TFile | void> {
+    const existing = app.vault.getAbstractFileByPath(FOOD_BASE_PATH);
+    const result = initializeTypes(app, settings);
 
-	const file = await app.vault.create(FOOD_BASE_PATH, FOOD_BASE_CONTENT);
-	new Notice('Created food base.');
-	return file;
+    if (typeof result === 'string') {
+        new Notice(result, 0);
+        return;
+    }
+
+    if (existing instanceof TFile) {
+        new Notice('Food base already exists.');
+        return existing;
+    }
+
+    const file = await app.vault.create(
+        FOOD_BASE_PATH,
+        buildFoodBaseContent(settings),
+    );
+    new Notice('Created food base.');
+    return file;
+}
+
+function initializeTypes(app: App, settings: FooderSettings): void | string {
+    const numberFields = [
+        settings.servingSizeProperty,
+        settings.caloriesProperty,
+        settings.carbsProperty,
+        settings.fatProperty,
+        settings.fiberProperty,
+        settings.proteinProperty,
+    ];
+    const textFields = [settings.servingSizeUnitProperty];
+    const properties = app.metadataTypeManager?.getAllProperties();
+    if (properties == null) return;
+    for (const field of numberFields) {
+        if (field in properties) {
+            if (properties[field]?.widget !== 'number') {
+                return `Property "${field}" is not a number property. Change the type in your vault, or change the property name in the Fooder settings.`;
+            }
+        }
+    }
+    for (const field of textFields) {
+        if (field in properties) {
+            if (properties[field]?.widget !== 'text') {
+                return `Property "${field}" is not a text property. Change the type in your vault, or change the property name in the Fooder settings.`;
+            }
+        }
+    }
+    for (const field of numberFields) {
+        if (!(field in properties)) {
+            app.metadataTypeManager.setType(field, 'number');
+        }
+    }
+    for (const field of textFields) {
+        if (!(field in properties)) {
+            app.metadataTypeManager.setType(field, 'text');
+        }
+    }
 }

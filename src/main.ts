@@ -64,7 +64,7 @@ export default class FooderPlugin extends Plugin {
 			id: 'setup-food-base',
 			name: 'Set up food base',
 			callback: async () => {
-				const base = await ensureFoodBase(this.app);
+				const base = await ensureFoodBase(this.app, this.settings);
 				let leaf = getLeafForFile(this.app, base);
 
 				if (leaf) {
@@ -124,6 +124,14 @@ export default class FooderPlugin extends Plugin {
 	updateFooderViewsSettings(): void {
 		for (const view of this.getFooderViews()) {
 			view.updateSettings(this.settings);
+		}
+	}
+
+	async refreshFooderViews(): Promise<void> {
+		const file = this.getActiveRecipeFile();
+
+		for (const view of this.getFooderViews()) {
+			await view.updateForFile(file, { force: true });
 		}
 	}
 

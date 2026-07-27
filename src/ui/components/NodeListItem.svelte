@@ -93,10 +93,7 @@
 		</div>
 	</ListItem>
 	{#each node.item.issues as issue, issueIndex (issueIndex)}
-		<div
-			class="flex justify-between items-baseline last:text-faint last:text-ui-smaller"
-			style:padding-left="{(depth + 1) * 0.75}rem"
-		>
+		<div class="flex justify-between items-baseline text-ui-smaller pl-6">
 			<div class="text-error!">{issue}</div>
 		</div>
 	{/each}

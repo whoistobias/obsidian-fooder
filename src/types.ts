@@ -1,65 +1,65 @@
 import type { UnitOfMeasure } from './utils/units';
 
 export interface FooderLinkSection {
-	link: string;
-	content: string | null;
-	sourcePath: string | null;
-	missing: boolean;
+    link: string;
+    content: string | null;
+    sourcePath: string | null;
+    missing: boolean;
 }
 
 export interface FooderViewState {
-	emptyMessage: string | null;
-	sections: FooderLinkSection[];
+    emptyMessage: string | null;
+    sections: FooderLinkSection[];
 }
 
 export interface FoodItem {
-	name: string;
-	amount: number;
-	calories: number;
-	protein: number;
-	fat: number;
-	carbs: number;
-	weight_grams: number;
-	fiber: number;
-	issues: string[];
+    name: string;
+    amount: number;
+    calories: number;
+    protein: number;
+    fat: number;
+    carbs: number;
+    weight_grams: number;
+    fiber: number;
+    issues: string[];
 }
 
 export interface MacroTotals {
-	calories: number;
-	protein: number;
-	fat: number;
-	carbs: number;
-	fiber: number;
-	weight_grams: number;
-	itemsWithIssues: number;
+    calories: number;
+    protein: number;
+    fat: number;
+    carbs: number;
+    fiber: number;
+    weight_grams: number;
+    itemsWithIssues: number;
 }
 
 export interface GroupNode {
-	type: 'group';
-	label: string;
-	children: FoodNode[];
-	totals: MacroTotals;
+    type: 'group';
+    label: string;
+    children: FoodNode[];
+    totals: MacroTotals;
 }
 export interface ItemNode {
-	type: 'food';
-	item: FoodItem;
+    type: 'food';
+    item: FoodItem;
 }
 
 export type FoodNode = GroupNode | ItemNode;
 
 export interface Quantity {
-	amount: number;
-	unit: UnitOfMeasure;
+    amount: number;
+    unit: UnitOfMeasure;
 }
 
 export interface RequiredFrontmatter {
-	servingSize: number;
-	servingSizeUnit: UnitOfMeasure;
-	calories: number;
-	protein: number;
-	carbs: number;
-	fat: number;
-	fiber: number;
+    servingSize: number;
+    servingSizeUnit: UnitOfMeasure;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber: number;
 }
 
 export const SERVING_SIZE_FRONTMATTER_KEY = 'serving_size';
