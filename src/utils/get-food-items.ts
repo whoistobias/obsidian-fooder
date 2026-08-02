@@ -18,11 +18,10 @@ import {
 } from '../types';
 import { type FooderSettings } from '../settings';
 import { buildFoodNodes, type FoodWithAncestors } from './build-food-nodes';
-import { FOOD_TAG } from './food';
+import { isFoodFile } from './file-classification';
 import { getHeadingsForPosition } from './get-headings-for-position';
 import { getListAncestorsForPostition } from './get-list-ancestors-for-position';
 import { parseQuantity } from './parse-quantity';
-import { fileHasTag } from './tags';
 import { parseUnit, UNITS } from './units';
 
 export async function getFoodItems(
@@ -49,7 +48,7 @@ export async function getFoodItems(
         if (!cache) {
             continue;
         }
-        if (!fileHasTag(cache, `#${FOOD_TAG}`)) {
+        if (!isFoodFile(app, file, cache, settings)) {
             continue;
         }
 

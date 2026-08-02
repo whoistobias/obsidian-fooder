@@ -1,13 +1,28 @@
 import { App, Notice, TFile } from 'obsidian';
 import { type FooderSettings } from '../settings';
-import { FOOD_TAG } from '../utils/food';
 
 export const FOOD_BASE_PATH = 'Foods.base';
+
+function buildFoodTagFilters(tags: string[]): string {
+    if (tags.length === 0) {
+        return '    - file.hasTag("food")';
+    }
+
+    if (tags.length === 1) {
+        return `    - file.hasTag("${tags[0]!.replace(/^#/, '')}")`;
+    }
+
+    const tagLines = tags
+        .map((tag) => `        - file.hasTag("${tag.replace(/^#/, '')}")`)
+        .join('\n');
+
+    return `    - or:\n${tagLines}`;
+}
 
 export function buildFoodBaseContent(settings: FooderSettings): string {
     return `filters:
   and:
-    - file.hasTag("${FOOD_TAG}")
+${buildFoodTagFilters(settings.foodTags)}
 
 properties:
   note.${settings.caloriesProperty}:

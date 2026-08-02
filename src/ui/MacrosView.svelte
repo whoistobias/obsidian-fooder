@@ -1,7 +1,6 @@
 <script lang="ts">
     import type { FooderSettings } from '../settings';
     import type { FoodNode } from '../types';
-    import { formatKcal } from '../utils/format-kcal';
     import NodeListItem from './components/NodeListItem.svelte';
     import ProgressBar from './components/ProgressBar.svelte';
 
@@ -21,7 +20,7 @@
 
     let { nodes, settings }: Props = $props();
 
-    const emptyMessage = 'Open a recipe note to see linked foods.';
+    const emptyMessage = 'No foods found.';
 
     let summary: MacrosSummary = $derived.by(() => {
         const summed = {

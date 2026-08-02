@@ -1,282 +1,296 @@
 import { MarkdownView, Plugin, TFile, WorkspaceLeaf } from 'obsidian';
 import { ensureFoodBase } from './base/food-base';
 import {
-	DEFAULT_SETTINGS,
-	FooderSettingTab,
-	type FooderSettings,
+    DEFAULT_SETTINGS,
+    FooderSettingTab,
+    type FooderSettings,
 } from './settings';
 import './styles.css';
 import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
-import { FOOD_TAG } from './utils/food';
 import { getLeafForFile } from './utils/get-leaf-for-file';
-import { RECIPE_TAG } from './utils/recipe';
-import { fileHasTag } from './utils/tags';
+import { isFoodFile, isMacroViewFile } from './utils/file-classification';
 
 export default class FooderPlugin extends Plugin {
-	settings!: FooderSettings;
-	private fooderViewActivation: Promise<void> | null = null;
+    settings!: FooderSettings;
+    private fooderViewActivation: Promise<void> | null = null;
 
-	async onload() {
-		await this.loadSettings();
+    async onload() {
+        await this.loadSettings();
 
-		this.registerView(
-			VIEW_TYPE_FOODER,
-			(leaf) => new FooderView(leaf, this),
-		);
+        this.registerView(
+            VIEW_TYPE_FOODER,
+            (leaf) => new FooderView(leaf, this),
+        );
 
-		await this.reconcileExistingFooderLeaves();
+        await this.reconcileExistingFooderLeaves();
 
-		this.registerEvent(
-			this.app.workspace.on('file-open', () => {
-				void this.syncFooderView();
-			}),
-		);
+        this.registerEvent(
+            this.app.workspace.on('file-open', () => {
+                void this.syncFooderView();
+            }),
+        );
 
-		this.registerEvent(
-			this.app.metadataCache.on('changed', (file) => {
-				void this.refreshFooderViewIfActive(file);
-			}),
-		);
+        this.registerEvent(
+            this.app.metadataCache.on('changed', (file) => {
+                void this.refreshFooderViewIfActive(file);
+            }),
+        );
 
-		this.registerEvent(
-			this.app.metadataCache.on('resolved', () => {
-				void this.syncFooderView();
-			}),
-		);
+        this.registerEvent(
+            this.app.metadataCache.on('resolved', () => {
+                void this.syncFooderView();
+            }),
+        );
 
-		this.addCommand({
-			id: 'show-linked-foods',
-			name: 'Show linked foods',
-			callback: () => {
-				void this.ensureFooderView();
-			},
-		});
+        this.addCommand({
+            id: 'show-linked-foods',
+            name: 'Show linked foods',
+            callback: () => {
+                void this.ensureFooderView();
+            },
+        });
 
-		this.addCommand({
-			id: 'show-macros',
-			name: 'Show macros',
-			callback: () => {
-				void this.openMacrosView();
-			},
-		});
+        this.addCommand({
+            id: 'show-macros',
+            name: 'Show macros',
+            callback: () => {
+                void this.openMacrosView();
+            },
+        });
 
-		this.addCommand({
-			id: 'setup-food-base',
-			name: 'Set up food base',
-			callback: async () => {
-				const base = await ensureFoodBase(this.app, this.settings);
-				let leaf = getLeafForFile(this.app, base);
+        this.addCommand({
+            id: 'setup-food-base',
+            name: 'Set up food base',
+            callback: async () => {
+                const base = await ensureFoodBase(this.app, this.settings);
+                if (!base) return;
 
-				if (leaf) {
-					this.app.workspace.setActiveLeaf(leaf, { focus: true });
-					return;
-				}
+                let leaf = getLeafForFile(this.app, base);
 
-				leaf = this.app.workspace.getMostRecentLeaf();
-				if (leaf === null) {
-					leaf = this.app.workspace.getLeaf();
-				}
-				await leaf.openFile(base);
-			},
-		});
+                if (leaf) {
+                    this.app.workspace.setActiveLeaf(leaf, { focus: true });
+                    return;
+                }
 
-		this.addSettingTab(new FooderSettingTab(this.app, this));
+                leaf = this.app.workspace.getMostRecentLeaf();
+                if (leaf === null) {
+                    leaf = this.app.workspace.getLeaf();
+                }
+                await leaf.openFile(base);
+            },
+        });
 
-		this.app.workspace.onLayoutReady(() => {
-			void this.syncFooderView();
-		});
+        this.addSettingTab(new FooderSettingTab(this.app, this));
 
-		await this.syncFooderView();
-	}
+        this.app.workspace.onLayoutReady(() => {
+            void this.syncFooderView();
+        });
 
-	async loadSettings(): Promise<void> {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<FooderSettings>,
-		);
-	}
+        await this.syncFooderView();
+    }
 
-	async saveSettings(): Promise<void> {
-		await this.saveData(this.settings);
-	}
+    async loadSettings(): Promise<void> {
+        this.settings = Object.assign(
+            {},
+            DEFAULT_SETTINGS,
+            (await this.loadData()) as Partial<FooderSettings>,
+        );
+    }
 
-	getActiveRecipeFile(): TFile | null {
-		const file = this.getActiveMarkdownFile();
-		if (!file) {
-			return null;
-		}
-		const cache = this.app.metadataCache.getFileCache(file);
-		if (!cache) {
-			return null;
-		}
-		if (!fileHasTag(cache, RECIPE_TAG)) {
-			return null;
-		}
+    async saveSettings(): Promise<void> {
+        await this.saveData(this.settings);
+    }
 
-		return file;
-	}
+    getActiveFooderFile(): TFile | null {
+        const file = this.getActiveMarkdownFile();
+        if (!file) {
+            return null;
+        }
+        const cache = this.app.metadataCache.getFileCache(file);
+        if (!cache) {
+            return null;
+        }
+        if (!isMacroViewFile(this.app, file, cache, this.settings)) {
+            return null;
+        }
 
-	async populateFooderView(view: FooderView): Promise<void> {
-		await view.updateForFile(this.getActiveRecipeFile());
-	}
+        return file;
+    }
 
-	updateFooderViewsSettings(): void {
-		for (const view of this.getFooderViews()) {
-			view.updateSettings(this.settings);
-		}
-	}
+    async onSettingsChanged(): Promise<void> {
+        this.updateFooderViewsSettings();
+        await this.syncFooderView();
+    }
 
-	async refreshFooderViews(): Promise<void> {
-		const file = this.getActiveRecipeFile();
+    async populateFooderView(view: FooderView): Promise<void> {
+        await view.updateForFile(this.getActiveFooderFile());
+    }
 
-		for (const view of this.getFooderViews()) {
-			await view.updateForFile(file, { force: true });
-		}
-	}
+    updateFooderViewsSettings(): void {
+        for (const view of this.getFooderViews()) {
+            view.updateSettings(this.settings);
+        }
+    }
 
-	private getActiveMarkdownFile(): TFile | null {
-		const activeFile = this.app.workspace.getActiveFile();
-		if (activeFile?.extension === 'md') {
-			return activeFile;
-		}
+    async refreshFooderViews(): Promise<void> {
+        const file = this.getActiveFooderFile();
 
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		return view?.file ?? null;
-	}
+        for (const view of this.getFooderViews()) {
+            await view.updateForFile(file, { force: true });
+        }
+    }
 
-	private getFooderViews(): FooderView[] {
-		return this.app.workspace
-			.getLeavesOfType(VIEW_TYPE_FOODER)
-			.map((leaf) => leaf.view)
-			.filter(
-				(view): view is FooderView =>
-					view.getViewType() === VIEW_TYPE_FOODER,
-			);
-	}
+    private getActiveMarkdownFile(): TFile | null {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (activeFile?.extension === 'md') {
+            return activeFile;
+        }
 
-	private getFooderView(): FooderView | null {
-		return this.getFooderViews()[0] ?? null;
-	}
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        return view?.file ?? null;
+    }
 
-	private async reconcileExistingFooderLeaves(): Promise<void> {
-		for (const leaf of this.app.workspace.getLeavesOfType(
-			VIEW_TYPE_FOODER,
-		)) {
-			await leaf.setViewState({
-				type: VIEW_TYPE_FOODER,
-				active: false,
-			});
-		}
-	}
+    private getFooderViews(): FooderView[] {
+        return this.app.workspace
+            .getLeavesOfType(VIEW_TYPE_FOODER)
+            .map((leaf) => leaf.view)
+            .filter((view): view is FooderView => this.isFooderView(view));
+    }
 
-	private async syncFooderView(): Promise<void> {
-		const file = this.getActiveRecipeFile();
+    private isFooderView(view: unknown): view is FooderView {
+        if (typeof view !== 'object' || view === null) {
+            return false;
+        }
 
-		if (file) {
-			await this.ensureFooderView();
-		}
+        const candidate = view as FooderView;
+        return (
+            typeof candidate.getViewType === 'function' &&
+            candidate.getViewType() === VIEW_TYPE_FOODER &&
+            typeof candidate.updateForFile === 'function' &&
+            typeof candidate.updateSettings === 'function'
+        );
+    }
 
-		for (const view of this.getFooderViews()) {
-			await view.updateForFile(file);
-		}
-	}
+    private getFooderView(): FooderView | null {
+        return this.getFooderViews()[0] ?? null;
+    }
 
-	private async refreshFooderViewIfActive(
-		modifiedFile: TFile,
-	): Promise<void> {
-		const activeFile = this.getActiveRecipeFile();
-		if (!activeFile) {
-			return;
-		}
+    private async reconcileExistingFooderLeaves(): Promise<void> {
+        for (const leaf of this.app.workspace.getLeavesOfType(
+            VIEW_TYPE_FOODER,
+        )) {
+            await leaf.setViewState({ type: 'empty' });
+            await leaf.setViewState({
+                type: VIEW_TYPE_FOODER,
+                active: false,
+            });
+        }
+    }
 
-		if (
-			modifiedFile.path !== activeFile.path &&
-			!this.recipeLinksFoodFile(activeFile, modifiedFile)
-		) {
-			return;
-		}
+    private async syncFooderView(): Promise<void> {
+        const file = this.getActiveFooderFile();
+        if (file) {
+            await this.ensureFooderView();
+        }
 
-		const fooderView = this.getFooderView();
-		if (fooderView) {
-			await fooderView.updateForFile(activeFile, { force: true });
-			return;
-		}
+        for (const view of this.getFooderViews()) {
+            await view.updateForFile(file);
+        }
+    }
 
-		await this.syncFooderView();
-	}
+    private async refreshFooderViewIfActive(
+        modifiedFile: TFile,
+    ): Promise<void> {
+        const activeFile = this.getActiveFooderFile();
+        if (!activeFile) {
+            return;
+        }
 
-	private recipeLinksFoodFile(
-		recipeFile: TFile,
-		linkedFile: TFile,
-	): boolean {
-		const linkedFileCache =
-			this.app.metadataCache.getFileCache(linkedFile);
-		if (
-			!linkedFileCache ||
-			!fileHasTag(linkedFileCache, `#${FOOD_TAG}`)
-		) {
-			return false;
-		}
+        if (
+            modifiedFile.path !== activeFile.path &&
+            !this.recipeLinksFoodFile(activeFile, modifiedFile)
+        ) {
+            return;
+        }
 
-		const recipeCache = this.app.metadataCache.getFileCache(recipeFile);
-		if (!recipeCache?.links) {
-			return false;
-		}
+        const fooderView = this.getFooderView();
+        if (fooderView) {
+            await fooderView.updateForFile(activeFile, { force: true });
+            return;
+        }
 
-		return recipeCache.links.some((link) => {
-			const destination = this.app.metadataCache.getFirstLinkpathDest(
-				link.link,
-				recipeFile.path,
-			);
-			return destination?.path === linkedFile.path;
-		});
-	}
+        await this.syncFooderView();
+    }
 
-	private async ensureFooderView(): Promise<void> {
-		if (!this.fooderViewActivation) {
-			this.fooderViewActivation = this.createFooderViewLeaf().finally(() => {
-				this.fooderViewActivation = null;
-			});
-		}
+    private recipeLinksFoodFile(recipeFile: TFile, linkedFile: TFile): boolean {
+        const linkedFileCache = this.app.metadataCache.getFileCache(linkedFile);
+        if (
+            !linkedFileCache ||
+            !isFoodFile(this.app, linkedFile, linkedFileCache, this.settings)
+        ) {
+            return false;
+        }
 
-		await this.fooderViewActivation;
-	}
+        const recipeCache = this.app.metadataCache.getFileCache(recipeFile);
+        if (!recipeCache?.links) {
+            return false;
+        }
 
-	private async openMacrosView(): Promise<void> {
-		await this.ensureFooderView();
+        return recipeCache.links.some((link) => {
+            const destination = this.app.metadataCache.getFirstLinkpathDest(
+                link.link,
+                recipeFile.path,
+            );
+            return destination?.path === linkedFile.path;
+        });
+    }
 
-		const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)[0];
-		if (leaf) {
-			void this.app.workspace.revealLeaf(leaf);
-		}
-	}
+    private async ensureFooderView(): Promise<void> {
+        if (!this.fooderViewActivation) {
+            this.fooderViewActivation = this.createFooderViewLeaf().finally(
+                () => {
+                    this.fooderViewActivation = null;
+                },
+            );
+        }
 
-	private async createFooderViewLeaf(): Promise<void> {
-		const { workspace } = this.app;
-		const leaves = workspace.getLeavesOfType(VIEW_TYPE_FOODER);
+        await this.fooderViewActivation;
+    }
 
-		for (const duplicateLeaf of leaves.slice(1)) {
-			duplicateLeaf.detach();
-		}
+    private async openMacrosView(): Promise<void> {
+        await this.ensureFooderView();
 
-		let leaf: WorkspaceLeaf | null = leaves[0] ?? null;
+        const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_FOODER)[0];
+        if (leaf) {
+            void this.app.workspace.revealLeaf(leaf);
+        }
+    }
 
-		if (!leaf) {
-			leaf = workspace.getRightLeaf(false);
-			if (!leaf) {
-				return;
-			}
+    private async createFooderViewLeaf(): Promise<void> {
+        const { workspace } = this.app;
+        const leaves = workspace.getLeavesOfType(VIEW_TYPE_FOODER);
 
-			await leaf.setViewState({
-				type: VIEW_TYPE_FOODER,
-				active: false,
-			});
-		} else if (leaf.view.getViewType() !== VIEW_TYPE_FOODER) {
-			await leaf.setViewState({
-				type: VIEW_TYPE_FOODER,
-				active: false,
-			});
-		}
-	}
+        for (const duplicateLeaf of leaves.slice(1)) {
+            duplicateLeaf.detach();
+        }
+
+        let leaf: WorkspaceLeaf | null = leaves[0] ?? null;
+
+        if (!leaf) {
+            leaf = workspace.getRightLeaf(false);
+            if (!leaf) {
+                return;
+            }
+
+            await leaf.setViewState({
+                type: VIEW_TYPE_FOODER,
+                active: false,
+            });
+        } else if (leaf.view.getViewType() !== VIEW_TYPE_FOODER) {
+            await leaf.setViewState({
+                type: VIEW_TYPE_FOODER,
+                active: false,
+            });
+        }
+    }
 }
