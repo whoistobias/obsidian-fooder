@@ -7,6 +7,7 @@ import {
 } from './settings';
 import './styles.css';
 import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
+import { FoodQuantitySuggest } from './ui/food-quantity-suggest';
 import { getLeafForFile } from './utils/get-leaf-for-file';
 import { isFoodFile, isMacroViewFile } from './utils/file-classification';
 
@@ -79,6 +80,8 @@ export default class FooderPlugin extends Plugin {
                 await leaf.openFile(base);
             },
         });
+
+        this.registerEditorSuggest(new FoodQuantitySuggest(this));
 
         this.addSettingTab(new FooderSettingTab(this.app, this));
 
