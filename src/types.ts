@@ -12,6 +12,11 @@ export interface FooderViewState {
     sections: FooderLinkSection[];
 }
 
+export interface SourcePosition {
+    line: number;
+    col: number;
+}
+
 export interface FoodItem {
     name: string;
     amount: number;
@@ -22,6 +27,15 @@ export interface FoodItem {
     weight_grams: number;
     fiber: number;
     issues: string[];
+    sourcePosition: SourcePosition;
+}
+
+export interface NodeMacroSummary {
+    calories: number;
+    protein: number;
+    fat: number;
+    carbs: number;
+    itemsWithIssues: number;
 }
 
 export interface MacroTotals {
@@ -37,6 +51,7 @@ export interface MacroTotals {
 export interface GroupNode {
     type: 'group';
     label: string;
+    line: number;
     children: FoodNode[];
     totals: MacroTotals;
 }

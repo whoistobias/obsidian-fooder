@@ -1,8 +1,13 @@
 <script lang="ts">
     import type { FooderSettings } from '../settings';
     import type { FoodNode } from '../types';
+    import { getNodeKey, treeContainsNodeKey } from '../utils/node-macros';
     import NodeListItem from './components/NodeListItem.svelte';
     import ProgressBar from './components/ProgressBar.svelte';
+    import {
+        createMacroSelection,
+        setMacroSelectionContext,
+    } from './macro-selection.svelte';
 
     interface MacrosSummary {
         calories: number;
@@ -20,7 +25,17 @@
 
     let { nodes, settings }: Props = $props();
 
+    const macroSelection = createMacroSelection();
+    setMacroSelectionContext(macroSelection);
+
     const emptyMessage = 'No foods found.';
+
+    $effect(() => {
+        const key = macroSelection.selectedNodeKey;
+        if (key !== null && !treeContainsNodeKey(nodes, key)) {
+            macroSelection.clearSelection();
+        }
+    });
 
     let summary: MacrosSummary = $derived.by(() => {
         const summed = {
@@ -130,8 +145,8 @@
         </div>
         <hr />
 
-        {#each nodes as node, i (i + (node.type === 'food' ? node.item.name : node.label))}
-            <NodeListItem {node} />
+        {#each nodes as node (getNodeKey(node))}
+            <NodeListItem {node} {settings} />
         {/each}
     {:else}
         <p class="text-center text-faint text-ui-small py-6 px-4">

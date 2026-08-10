@@ -39,6 +39,7 @@ export function buildFoodNodes(
 			if (!group) {
 				group = {
 					type: 'group',
+					line,
 					label: getLabelForLine(
 						line,
 						sourceText,

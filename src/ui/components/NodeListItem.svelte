@@ -1,100 +1,155 @@
 <script lang="ts">
-	import { slide } from 'svelte/transition';
-	import type { FoodNode } from '../../types';
-	import { formatKcal } from '../../utils/format-kcal';
-	import { icon } from '../attachments/icon';
-	import ListItem from './ListItem.svelte';
-	import Self from './NodeListItem.svelte';
+    import { slide } from 'svelte/transition';
+    import type { FooderSettings } from '../../settings';
+    import type { FoodNode } from '../../types';
+    import {
+        foodNodeToSummary,
+        getNodeKey,
+        getNodeLabel,
+    } from '../../utils/node-macros';
+    import { formatKcal } from '../../utils/format-kcal';
+    import { getMacroSelectionContext } from '../macro-selection.svelte';
+    import { icon } from '../attachments/icon';
+    import ListItem from './ListItem.svelte';
+    import NodeMacroPanel from './NodeMacroPanel.svelte';
+    import Self from './NodeListItem.svelte';
 
-	interface Props {
-		node: FoodNode;
-		depth?: number;
-	}
+    interface Props {
+        node: FoodNode;
+        settings: FooderSettings;
+        depth?: number;
+    }
 
-	let { node, depth = 0 }: Props = $props();
+    let { node, settings, depth = 0 }: Props = $props();
 
-	const indentStep = '16px + 0.666px';
+    const indentStep = '16px + 0.666px';
+    const macroSelection = getMacroSelectionContext();
+    const nodeKey = $derived(getNodeKey(node));
+    const nodeSummary = $derived(foodNodeToSummary(node));
+    const nodeLabel = $derived(getNodeLabel(node));
+    const macrosOpen = $derived(macroSelection.isSelected(nodeKey));
 
-	let expanded = $state(true);
+    let expanded = $state(true);
 
-	function nodeKey(child: FoodNode): string {
-		return child.type === 'food' ? child.item.name : child.label;
-	}
+    function maxRenderDepth(
+        group: Extract<FoodNode, { type: 'group' }>,
+        groupDepth: number,
+    ): number {
+        let max = groupDepth;
 
-	function maxRenderDepth(
-		group: Extract<FoodNode, { type: 'group' }>,
-		groupDepth: number,
-	): number {
-		let max = groupDepth;
+        for (const child of group.children) {
+            const childDepth = groupDepth + 1;
+            max = Math.max(
+                max,
+                child.type === 'group'
+                    ? maxRenderDepth(child, childDepth)
+                    : childDepth,
+            );
+        }
 
-		for (const child of group.children) {
-			const childDepth = groupDepth + 1;
-			max = Math.max(
-				max,
-				child.type === 'group'
-					? maxRenderDepth(child, childDepth)
-					: childDepth,
-			);
-		}
+        return max;
+    }
 
-		return max;
-	}
+    function toggleExpanded(event: MouseEvent) {
+        event.stopPropagation();
+        expanded = !expanded;
+    }
 
-	function toggleExpanded() {
-		expanded = !expanded;
-	}
+    function toggleMacroPanel() {
+        macroSelection.toggleNode(nodeKey);
+    }
 </script>
 
 {#if node.type === 'group'}
-	{@const bleedDepth = maxRenderDepth(node, depth)}
-	<div>
-		<ListItem {depth} onclick={toggleExpanded}>
-			<div
-				class="flex items-center justify-center -ml-5 size-4 [&_svg]:size-3.75 self-center text-nav-collapse-icon [&_svg]:stroke-[2.5] transition-transform duration-200"
-				class:-rotate-90={!expanded}
-				{@attach icon('chevron-down')}
-			></div>
-			<div class="">{node.label}</div>
-			<div class="flex-1"></div>
-			<div
-				class="text-ui-smaller text-faint group-hover:text-normal group-hover:opacity-100"
-				class:opacity-0={expanded}
-				class:opacity-100={!expanded}
-			>
-				{formatKcal(node.totals.calories)} kcal
-			</div>
-		</ListItem>
-		{#if expanded}
-			<div
-				transition:slide={{ duration: 200 }}
-				style:padding-left="calc({bleedDepth} * ({indentStep}))"
-				style:margin-left="calc(-{bleedDepth} * ({indentStep}))"
-			>
-				<div
-					class="border-l-[0.666px] border-indentation-guide pl-1 ml-3"
-				>
-					{#each node.children as child, i (i + nodeKey(child))}
-						<Self node={child} depth={depth + 1} />
-					{/each}
-				</div>
-			</div>
-		{/if}
-	</div>
+    {@const bleedDepth = maxRenderDepth(node, depth)}
+    <div>
+        <ListItem
+            {depth}
+            active={macrosOpen}
+            detailsOpen={macrosOpen}
+            onclick={toggleMacroPanel}
+        >
+            <div
+                class="flex items-center justify-center -ml-5 size-4 [&_svg]:size-3.75 self-center text-nav-collapse-icon [&_svg]:stroke-[2.5] transition-transform duration-200"
+                class:-rotate-90={!expanded}
+                onclick={toggleExpanded}
+                onkeydown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        expanded = !expanded;
+                    }
+                }}
+                role="button"
+                tabindex="0"
+                aria-expanded={expanded}
+                aria-label="Toggle {node.label}"
+                {@attach icon('chevron-down')}
+            ></div>
+            <div class="">{node.label}</div>
+            <div class="flex-1"></div>
+            <div
+                class="text-ui-smaller text-faint group-hover:text-normal group-hover:opacity-100"
+                class:opacity-0={expanded}
+                class:opacity-100={!expanded}
+            >
+                {formatKcal(node.totals.calories)} kcal
+            </div>
+            {#snippet details()}
+                <NodeMacroPanel
+                    summary={nodeSummary}
+                    label={nodeLabel}
+                    {settings}
+                />
+            {/snippet}
+        </ListItem>
+        {#if expanded}
+            <div
+                transition:slide={{ duration: 200 }}
+                style:padding-left="calc({bleedDepth} * ({indentStep}))"
+                style:margin-left="calc(-{bleedDepth} * ({indentStep}))"
+            >
+                <div
+                    class="border-l-[0.666px] border-indentation-guide pl-1 ml-3 flex flex-col gap-2-1 mt-2-1"
+                >
+                    {#each node.children as child (getNodeKey(child))}
+                        <Self node={child} {settings} depth={depth + 1} />
+                    {/each}
+                </div>
+            </div>
+        {/if}
+    </div>
 {:else}
-	<ListItem {depth}>
-		<div>
-			{node.item.name}
-			<span class="text-ui-smaller text-faint"
-				>{node.item.weight_grams}g</span
-			>
-		</div>
-		<div class="text-ui-smaller text-faint group-hover:text-normal">
-			{formatKcal(node.item.calories)} kcal
-		</div>
-	</ListItem>
-	{#each node.item.issues as issue, issueIndex (issueIndex)}
-		<div class="flex justify-between items-baseline text-ui-smaller pl-6">
-			<div class="text-error!">{issue}</div>
-		</div>
-	{/each}
+    <div>
+        <ListItem
+            {depth}
+            active={macrosOpen}
+            detailsOpen={macrosOpen}
+            onclick={toggleMacroPanel}
+        >
+            <div>
+                {node.item.name}
+                <span class="text-ui-smaller text-faint"
+                    >{node.item.weight_grams}g</span
+                >
+            </div>
+            <div class="text-ui-smaller text-faint group-hover:text-normal">
+                {formatKcal(node.item.calories)} kcal
+            </div>
+            {#snippet details()}
+                <NodeMacroPanel
+                    summary={nodeSummary}
+                    label={nodeLabel}
+                    {settings}
+                />
+            {/snippet}
+        </ListItem>
+        {#each node.item.issues as issue, issueIndex (issueIndex)}
+            <div
+                class="flex justify-between items-baseline text-ui-smaller pl-6"
+            >
+                <div class="text-error!">{issue}</div>
+            </div>
+        {/each}
+    </div>
 {/if}

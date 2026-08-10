@@ -3,6 +3,7 @@ import {
     TFile,
     type CachedMetadata,
     type FrontMatterCache,
+    type Loc,
 } from 'obsidian';
 import {
     CALORIES_FRONTMATTER_KEY,
@@ -76,7 +77,13 @@ export async function getFoodItems(
 
         foods.push({
             ancestorLineNumbers,
-            food: createFoodItem(file, cache, link.displayText, settings),
+            food: createFoodItem(
+                file,
+                cache,
+                link.displayText,
+                settings,
+                link.position.start,
+            ),
         });
     }
 
@@ -89,6 +96,7 @@ function createFoodItem(
     cache: CachedMetadata,
     displayText: string | undefined,
     settings: FooderSettings,
+    sourcePosition: Loc,
 ): FoodItem {
     const foodItem: FoodItem = {
         name: file.basename,
@@ -100,6 +108,7 @@ function createFoodItem(
         fat: 0,
         fiber: 0,
         issues: [],
+        sourcePosition,
     };
 
     const {
