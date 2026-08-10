@@ -12,6 +12,21 @@ import { isFoodFile, isRecipeFile } from '../utils/file-classification';
 
 const WIKILINK_QUANTITY_PATTERN = /\[\[([^\]]+)\]\](?!\s)([^[]*)$/;
 
+function parseWikilinkContent(linkContent: string): {
+    target: string;
+    alias?: string;
+} {
+    const pipeIndex = linkContent.indexOf('|');
+    if (pipeIndex === -1) {
+        return { target: linkContent };
+    }
+
+    return {
+        target: linkContent.slice(0, pipeIndex),
+        alias: linkContent.slice(pipeIndex + 1),
+    };
+}
+
 interface FoodSuggestion {
     title: string;
     note: string;
@@ -21,6 +36,7 @@ interface FoodSuggestion {
 export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
     private linkedFile: TFile | null = null;
     private linkText: string | null = null;
+    private linkAlias: string | null = null;
 
     constructor(private plugin: FooderPlugin) {
         super(plugin.app);
@@ -33,6 +49,7 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
     ): EditorSuggestTriggerInfo | null {
         this.linkedFile = null;
         this.linkText = null;
+        this.linkAlias = null;
 
         if (!file) return null;
 
@@ -44,7 +61,9 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
             return null;
         }
 
-        const linkText = match[1];
+        const { target: linkText, alias: linkAlias } = parseWikilinkContent(
+            match[1],
+        );
         const dest = this.app.metadataCache.getFirstLinkpathDest(
             linkText,
             file.path,
@@ -68,6 +87,7 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
 
         this.linkedFile = dest;
         this.linkText = linkText;
+        this.linkAlias = linkAlias ?? null;
 
         return {
             start: { line: cursor.line, ch: match.index || 0 },
@@ -81,11 +101,13 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
             return [];
         }
 
+        const displayName = this.linkAlias ?? this.linkText;
+
         if (!context.query) {
             return [
                 {
                     title: 'Amount',
-                    note: this.linkText,
+                    note: displayName,
                     titleMuted: true,
                 },
             ];
@@ -94,7 +116,7 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
         return [
             {
                 title: context.query,
-                note: this.linkText,
+                note: displayName,
                 titleMuted: false,
             },
         ];
@@ -127,7 +149,8 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
             return;
         }
 
-        const alias = `${context.query} ${this.linkText.toLowerCase()}`;
+        const nameForAlias = this.linkAlias ?? this.linkText;
+        const alias = `${context.query} ${nameForAlias}`;
         const replacement = `[[${this.linkText}|${alias}]]`;
 
         context.editor.replaceRange(replacement, context.start, context.end);
