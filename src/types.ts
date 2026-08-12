@@ -57,6 +57,8 @@ export interface GroupNode {
     /** Set when this group represents an expanded recipe reference. */
     recipeFile?: string;
     scaleFactor?: number;
+    /** Requested portion in grams for one-off scaled groups. */
+    portionGrams?: number;
     issues?: string[];
     /** Link position when this group comes from a wikilink in the source note. */
     sourcePosition?: SourcePosition;

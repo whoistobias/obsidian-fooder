@@ -90,7 +90,7 @@
                 {@attach icon('chevron-down')}
             ></div>
             <div>{node.label}&nbsp;</div>
-            {#if node.recipeFile}
+            {#if node.recipeFile || node.portionGrams !== undefined}
                 <span class="text-ui-smaller text-faint"
                     >{formatGrams(node.totals.weight_grams)}g</span
                 >

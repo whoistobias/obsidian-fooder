@@ -2,6 +2,10 @@ import { App, TFile } from 'obsidian';
 import type { FoodNode } from '../types';
 import { type FooderSettings } from '../settings';
 import { buildFoodNodes, type NodeWithAncestors } from './build-food-nodes';
+import {
+    applyPortionGroups,
+    recomputeStructuralGroupTotals,
+} from './apply-portion-groups';
 import { createFoodItem } from './create-food-item';
 import { isRecipeFile } from './file-classification';
 import { collectLinkAncestorLines } from './collect-link-ancestors';
@@ -99,7 +103,10 @@ export async function getFoodItems(
     }
 
     const sourceText = await app.vault.cachedRead(source_file);
-    return buildFoodNodes(nodes, sourceText, headings, listItems);
+    const tree = buildFoodNodes(nodes, sourceText, headings, listItems);
+    applyPortionGroups(tree);
+    recomputeStructuralGroupTotals(tree);
+    return tree;
 }
 
 export { createFoodItem } from './create-food-item';
