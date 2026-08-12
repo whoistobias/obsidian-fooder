@@ -1,29 +1,15 @@
-import {
-    App,
-    TFile,
-    type CachedMetadata,
-    type FrontMatterCache,
-    type Loc,
-} from 'obsidian';
-import {
-    CALORIES_FRONTMATTER_KEY,
-    CARBS_FRONTMATTER_KEY,
-    FAT_FRONTMATTER_KEY,
-    FIBER_FRONTMATTER_KEY,
-    PROTEIN_FRONTMATTER_KEY,
-    SERVING_SIZE_UNIT_FRONTMATTER_KEY,
-    type FoodItem,
-    type FoodNode,
-    type Quantity,
-    type RequiredFrontmatter,
-} from '../types';
+import { App, TFile } from 'obsidian';
+import type { FoodNode } from '../types';
 import { type FooderSettings } from '../settings';
-import { buildFoodNodes, type FoodWithAncestors } from './build-food-nodes';
-import { isFoodFile } from './file-classification';
-import { getHeadingsForPosition } from './get-headings-for-position';
-import { getListAncestorsForPostition } from './get-list-ancestors-for-position';
-import { parseQuantity } from './parse-quantity';
-import { parseUnit, UNITS } from './units';
+import { buildFoodNodes, type NodeWithAncestors } from './build-food-nodes';
+import { createFoodItem } from './create-food-item';
+import { isRecipeFile } from './file-classification';
+import { collectLinkAncestorLines } from './collect-link-ancestors';
+import {
+    isMacroRelevantFile,
+    resolveRecipeIngredient,
+    resolveRecipeReference,
+} from './resolve-recipe';
 
 export async function getFoodItems(
     app: App,
@@ -31,11 +17,20 @@ export async function getFoodItems(
     settings: FooderSettings,
 ): Promise<FoodNode[]> {
     const cache = app.metadataCache.getFileCache(source_file);
+    if (!cache) {
+        return [];
+    }
 
-    const listItems = cache?.listItems;
-    const headings = cache?.headings;
-    const links = cache?.links ?? [];
-    const foods: FoodWithAncestors[] = [];
+    const listItems = cache.listItems;
+    const headings = cache.headings;
+    const links = cache.links ?? [];
+    const nodes: NodeWithAncestors[] = [];
+    const sourceIsRecipe = isRecipeFile(
+        app,
+        source_file,
+        cache,
+        settings,
+    );
 
     for (const link of links) {
         const file = app.metadataCache.getFirstLinkpathDest(
@@ -45,217 +40,66 @@ export async function getFoodItems(
         if (!file) {
             continue;
         }
-        const cache = app.metadataCache.getFileCache(file);
-        if (!cache) {
+        const destCache = app.metadataCache.getFileCache(file);
+        if (!destCache) {
             continue;
         }
-        if (!isFoodFile(app, file, cache, settings)) {
+        if (!isMacroRelevantFile(app, file, destCache, settings)) {
             continue;
         }
 
-        const ancestorLineNumbers: number[] = [];
+        const ancestorLineNumbers = collectLinkAncestorLines(
+            link.position,
+            listItems,
+            headings,
+        );
 
-        if (listItems) {
-            const foundListAncestors = getListAncestorsForPostition(
-                listItems,
-                link.position,
-            );
-            for (const listAncestor of foundListAncestors) {
-                ancestorLineNumbers.push(listAncestor.position.start.line);
+        const sourcePosition = {
+            line: link.position.start.line,
+            col: link.position.start.col,
+        };
+
+        let node: FoodNode;
+        if (isRecipeFile(app, file, destCache, settings)) {
+            if (sourceIsRecipe) {
+                node = await resolveRecipeIngredient(
+                    app,
+                    settings,
+                    file,
+                    link.displayText,
+                    sourcePosition,
+                    { visited: new Set(), depth: 0 },
+                );
+            } else {
+                node = await resolveRecipeReference(
+                    app,
+                    settings,
+                    file,
+                    link.displayText,
+                    sourcePosition,
+                );
             }
+        } else {
+            node = {
+                type: 'food',
+                item: createFoodItem(
+                    file,
+                    destCache,
+                    link.displayText,
+                    settings,
+                    link.position.start,
+                ),
+            };
         }
 
-        if (headings) {
-            const foundHeadings = getHeadingsForPosition(
-                headings,
-                link.position,
-            );
-            for (const heading of foundHeadings) {
-                ancestorLineNumbers.push(heading.position.start.line);
-            }
-        }
-
-        foods.push({
+        nodes.push({
             ancestorLineNumbers,
-            food: createFoodItem(
-                file,
-                cache,
-                link.displayText,
-                settings,
-                link.position.start,
-            ),
+            node,
         });
     }
 
     const sourceText = await app.vault.cachedRead(source_file);
-    return buildFoodNodes(foods, sourceText, headings, listItems);
+    return buildFoodNodes(nodes, sourceText, headings, listItems);
 }
 
-function createFoodItem(
-    file: TFile,
-    cache: CachedMetadata,
-    displayText: string | undefined,
-    settings: FooderSettings,
-    sourcePosition: Loc,
-): FoodItem {
-    const foodItem: FoodItem = {
-        name: file.basename,
-        weight_grams: 0,
-        protein: 0,
-        amount: 0,
-        calories: 0,
-        carbs: 0,
-        fat: 0,
-        fiber: 0,
-        issues: [],
-        sourcePosition,
-    };
-
-    const {
-        frontmatter: {
-            servingSize,
-            servingSizeUnit,
-            calories,
-            carbs,
-            fat,
-            fiber,
-            protein,
-        },
-        issues,
-    } = validateFrontmatter(cache.frontmatter ?? {}, settings);
-    foodItem.issues = issues;
-    if (servingSize === 0) {
-        return foodItem;
-    }
-    const servingQuantity: Quantity = {
-        amount: servingSize,
-        unit: servingSizeUnit,
-    };
-    const quantity = parseQuantity(displayText);
-    const servingSizeGrams = quantityToGrams(servingQuantity);
-    const amountGrams = convertToGrams(quantity, servingSizeGrams);
-
-    foodItem.protein = amountGrams * (protein / servingSizeGrams);
-    foodItem.calories = amountGrams * (calories / servingSizeGrams);
-    foodItem.carbs = amountGrams * (carbs / servingSizeGrams);
-    foodItem.fat = amountGrams * (fat / servingSizeGrams);
-    foodItem.fiber = amountGrams * (fiber / servingSizeGrams);
-
-    foodItem.weight_grams = amountGrams;
-    return foodItem;
-}
-
-// Converts the amount of food to grams, needs serving quantity so that if the amount is "unit" (e.g. an apple), it can provide the grams from the serving amount.
-function convertToGrams(quantity: Quantity, servingSizeGrams: number): number {
-    // const quantityGrams = TODO THIS IS WHERE WE ARE
-    if (quantity.unit === 'unit') {
-        return servingSizeGrams * quantity.amount;
-    } else {
-        return quantityToGrams(quantity);
-    }
-}
-// Simply converts a quantity struct to the number of grams
-function quantityToGrams(quantity: Quantity): number {
-    if (quantity.unit === 'unit') return 0;
-    const multiplier = UNITS[quantity.unit].toGrams;
-    return quantity.amount * multiplier;
-}
-
-interface FrontMatterValidation {
-    frontmatter: RequiredFrontmatter;
-    issues: string[];
-}
-
-function validateFrontmatter(
-    frontmatterCache: FrontMatterCache,
-    settings: FooderSettings,
-): FrontMatterValidation {
-    const issues: string[] = [];
-    const frontmatter: RequiredFrontmatter = {
-        servingSize: 0,
-        servingSizeUnit: 'g',
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0,
-        fiber: 0,
-    };
-    const servingSize: unknown = frontmatterCache[settings.servingSizeProperty];
-    if (servingSize == null) {
-        issues.push('serving size missing');
-    } else if (typeof servingSize !== 'number') {
-        issues.push('serving size must be a number');
-    } else if (servingSize <= 0) {
-        issues.push('serving size must be greater than 0');
-    } else {
-        frontmatter.servingSize = servingSize;
-    }
-
-    const servingSizeUnit: unknown =
-        frontmatterCache[SERVING_SIZE_UNIT_FRONTMATTER_KEY];
-    if (servingSizeUnit) {
-        if (typeof servingSizeUnit !== 'string') {
-            issues.push('serving size unit must be a string.');
-        } else {
-            const unit = parseUnit(servingSizeUnit);
-            if (unit === null) {
-                issues.push(`invalid serving size unit.`);
-            } else {
-                frontmatter.servingSizeUnit = unit;
-            }
-        }
-    }
-
-    const calories = validateNumber(
-        frontmatterCache[CALORIES_FRONTMATTER_KEY],
-        'calories',
-        issues,
-    );
-    frontmatter.calories = calories ?? frontmatter.calories;
-
-    const protein = validateNumber(
-        frontmatterCache[PROTEIN_FRONTMATTER_KEY],
-        'protein',
-        issues,
-    );
-    frontmatter.protein = protein ?? frontmatter.protein;
-    const carbs = validateNumber(
-        frontmatterCache[CARBS_FRONTMATTER_KEY],
-        'carbs',
-        issues,
-    );
-    frontmatter.carbs = carbs ?? frontmatter.carbs;
-
-    const fat = validateNumber(
-        frontmatterCache[FAT_FRONTMATTER_KEY],
-        'fat',
-        issues,
-    );
-    frontmatter.fat = fat ?? frontmatter.fat;
-
-    const fiber: unknown = frontmatterCache[FIBER_FRONTMATTER_KEY];
-    if (fiber) {
-        if (typeof fiber !== 'number') {
-            issues.push('fiber must be a number');
-        } else {
-            frontmatter.fiber = fiber;
-        }
-    }
-
-    return { frontmatter, issues };
-}
-
-function validateNumber(
-    input: unknown,
-    title: string,
-    issues: string[],
-): number | null {
-    if (input == null) {
-        issues.push(`${title} missing`);
-    } else if (typeof input !== 'number') {
-        issues.push('${} must be a number');
-    } else {
-        return input;
-    }
-    return null;
-}
+export { createFoodItem } from './create-food-item';

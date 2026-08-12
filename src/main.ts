@@ -9,7 +9,8 @@ import './styles.css';
 import { FooderView, VIEW_TYPE_FOODER } from './ui/macros-view';
 import { FoodQuantitySuggest } from './ui/food-quantity-suggest';
 import { getLeafForFile } from './utils/get-leaf-for-file';
-import { isFoodFile, isMacroViewFile } from './utils/file-classification';
+import { isMacroViewFile } from './utils/file-classification';
+import { fileDependsOnTarget } from './utils/resolve-recipe';
 
 export default class FooderPlugin extends Plugin {
     settings!: FooderSettings;
@@ -211,7 +212,13 @@ export default class FooderPlugin extends Plugin {
 
         if (
             modifiedFile.path !== activeFile.path &&
-            !this.recipeLinksFoodFile(activeFile, modifiedFile)
+            !fileDependsOnTarget(
+                this.app,
+                this.settings,
+                activeFile,
+                modifiedFile,
+                new Set(),
+            )
         ) {
             return;
         }
@@ -223,29 +230,6 @@ export default class FooderPlugin extends Plugin {
         }
 
         await this.syncFooderView();
-    }
-
-    private recipeLinksFoodFile(recipeFile: TFile, linkedFile: TFile): boolean {
-        const linkedFileCache = this.app.metadataCache.getFileCache(linkedFile);
-        if (
-            !linkedFileCache ||
-            !isFoodFile(this.app, linkedFile, linkedFileCache, this.settings)
-        ) {
-            return false;
-        }
-
-        const recipeCache = this.app.metadataCache.getFileCache(recipeFile);
-        if (!recipeCache?.links) {
-            return false;
-        }
-
-        return recipeCache.links.some((link) => {
-            const destination = this.app.metadataCache.getFirstLinkpathDest(
-                link.link,
-                recipeFile.path,
-            );
-            return destination?.path === linkedFile.path;
-        });
     }
 
     private async ensureFooderView(): Promise<void> {

@@ -2,6 +2,12 @@ import type { FoodNode, NodeMacroSummary } from '../types';
 
 export function getNodeKey(node: FoodNode): string {
 	if (node.type === 'group') {
+		if (node.sourcePosition) {
+			return `group:${node.sourcePosition.line}:${node.sourcePosition.col}`;
+		}
+		if (node.recipeFile) {
+			return `recipe:${node.recipeFile}:${node.line}`;
+		}
 		return `group:${node.line}`;
 	}
 
@@ -11,12 +17,14 @@ export function getNodeKey(node: FoodNode): string {
 
 export function foodNodeToSummary(node: FoodNode): NodeMacroSummary {
 	if (node.type === 'group') {
+		const itemsWithIssues =
+			node.totals.itemsWithIssues + (node.issues?.length ? 1 : 0);
 		return {
 			calories: node.totals.calories,
 			protein: node.totals.protein,
 			fat: node.totals.fat,
 			carbs: node.totals.carbs,
-			itemsWithIssues: node.totals.itemsWithIssues,
+			itemsWithIssues,
 		};
 	}
 

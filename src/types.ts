@@ -54,6 +54,12 @@ export interface GroupNode {
     line: number;
     children: FoodNode[];
     totals: MacroTotals;
+    /** Set when this group represents an expanded recipe reference. */
+    recipeFile?: string;
+    scaleFactor?: number;
+    issues?: string[];
+    /** Link position when this group comes from a wikilink in the source note. */
+    sourcePosition?: SourcePosition;
 }
 export interface ItemNode {
     type: 'food';
@@ -79,6 +85,8 @@ export interface RequiredFrontmatter {
 
 export const SERVING_SIZE_FRONTMATTER_KEY = 'serving_size';
 export const SERVING_SIZE_UNIT_FRONTMATTER_KEY = 'serving_size_unit';
+export const YIELD_FRONTMATTER_KEY = 'yield';
+export const YIELD_UNIT_FRONTMATTER_KEY = 'yield_unit';
 export const CALORIES_FRONTMATTER_KEY = 'calories';
 export const PROTEIN_FRONTMATTER_KEY = 'protein';
 export const CARBS_FRONTMATTER_KEY = 'carbs';

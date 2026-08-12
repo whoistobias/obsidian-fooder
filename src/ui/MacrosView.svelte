@@ -47,21 +47,27 @@
             itemsWithIssues: 0,
         };
 
-        const walk = (foodNodes: FoodNode[]) => {
-            for (const node of foodNodes) {
-                if (node.type === 'group') {
-                    walk(node.children);
-                    continue;
+        for (const node of nodes) {
+            if (node.type === 'group') {
+                summed.calories += node.totals.calories;
+                summed.protein += node.totals.protein;
+                summed.fat += node.totals.fat;
+                summed.carbs += node.totals.carbs;
+                summed.fiber += node.totals.fiber;
+                summed.itemsWithIssues += node.totals.itemsWithIssues;
+                if (node.issues?.length) {
+                    summed.itemsWithIssues += 1;
                 }
-                summed.calories += node.item.calories;
-                summed.protein += node.item.protein;
-                summed.fat += node.item.fat;
-                summed.carbs += node.item.carbs;
-                summed.fiber += node.item.fiber;
-                summed.itemsWithIssues += node.item.issues.length ? 1 : 0;
+                continue;
             }
-        };
-        walk(nodes);
+
+            summed.calories += node.item.calories;
+            summed.protein += node.item.protein;
+            summed.fat += node.item.fat;
+            summed.carbs += node.item.carbs;
+            summed.fiber += node.item.fiber;
+            summed.itemsWithIssues += node.item.issues.length ? 1 : 0;
+        }
 
         return {
             calories: Number(summed.calories.toFixed(1)),

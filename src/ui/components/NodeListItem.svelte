@@ -29,7 +29,9 @@
     const nodeLabel = $derived(getNodeLabel(node));
     const macrosOpen = $derived(macroSelection.isSelected(nodeKey));
 
-    let expanded = $state(true);
+    const startsCollapsed = () =>
+        node.type === 'group' && node.recipeFile !== undefined;
+    let expanded = $state(!startsCollapsed);
 
     function maxRenderDepth(
         group: Extract<FoodNode, { type: 'group' }>,
@@ -86,7 +88,12 @@
                 aria-label="Toggle {node.label}"
                 {@attach icon('chevron-down')}
             ></div>
-            <div class="">{node.label}</div>
+            <div>{node.label}&nbsp;</div>
+            {#if node.recipeFile}
+                <span class="text-ui-smaller text-faint"
+                    >{node.totals.weight_grams}g</span
+                >
+            {/if}
             <div class="flex-1"></div>
             <div
                 class="text-ui-smaller text-faint group-hover:text-normal group-hover:opacity-100"
@@ -103,6 +110,15 @@
                 />
             {/snippet}
         </ListItem>
+        {#if node.issues}
+            {#each node.issues as issue, issueIndex (issueIndex)}
+                <div
+                    class="flex justify-between items-baseline text-ui-smaller pl-6"
+                >
+                    <div class="text-error!">{issue}</div>
+                </div>
+            {/each}
+        {/if}
         {#if expanded}
             <div
                 transition:slide={{ duration: 200 }}
@@ -128,8 +144,7 @@
             onclick={toggleMacroPanel}
         >
             <div>
-                {node.item.name}
-                <span class="text-ui-smaller text-faint"
+                {node.item.name}&nbsp;<span class="text-ui-smaller text-faint"
                     >{node.item.weight_grams}g</span
                 >
             </div>

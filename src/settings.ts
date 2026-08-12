@@ -11,6 +11,8 @@ import {
     PROTEIN_FRONTMATTER_KEY,
     SERVING_SIZE_FRONTMATTER_KEY,
     SERVING_SIZE_UNIT_FRONTMATTER_KEY,
+    YIELD_FRONTMATTER_KEY,
+    YIELD_UNIT_FRONTMATTER_KEY,
 } from './types';
 
 export interface FooderSettings {
@@ -31,6 +33,8 @@ export interface FooderSettings {
     carbsProperty: string;
     fatProperty: string;
     fiberProperty: string;
+    yieldProperty: string;
+    yieldUnitProperty: string;
 }
 
 export const DEFAULT_SETTINGS: FooderSettings = {
@@ -51,6 +55,8 @@ export const DEFAULT_SETTINGS: FooderSettings = {
     carbsProperty: CARBS_FRONTMATTER_KEY,
     fatProperty: FAT_FRONTMATTER_KEY,
     fiberProperty: FIBER_FRONTMATTER_KEY,
+    yieldProperty: YIELD_FRONTMATTER_KEY,
+    yieldUnitProperty: YIELD_UNIT_FRONTMATTER_KEY,
 };
 //
 function validatePropertyName(value: string): string | void {
@@ -471,6 +477,8 @@ export class FooderSettingTab extends PluginSettingTab {
                                                     'fatProperty',
                                                     'fiberProperty',
                                                     'servingSizeUnitProperty',
+                                                    'yieldProperty',
+                                                    'yieldUnitProperty',
                                                 ] as const;
                                                 for (const key of keys) {
                                                     this.plugin.settings[key] =
@@ -570,6 +578,32 @@ export class FooderSettingTab extends PluginSettingTab {
                                                 DEFAULT_SETTINGS.servingSizeUnitProperty,
                                             defaultValue:
                                                 DEFAULT_SETTINGS.servingSizeUnitProperty,
+                                            validate: validatePropertyName,
+                                        },
+                                    },
+                                    {
+                                        name: 'Yield',
+                                        desc: 'Frontmatter property name for recipe batch yield.',
+                                        control: {
+                                            type: 'text' as const,
+                                            key: 'yieldProperty',
+                                            placeholder:
+                                                DEFAULT_SETTINGS.yieldProperty,
+                                            defaultValue:
+                                                DEFAULT_SETTINGS.yieldProperty,
+                                            validate: validatePropertyName,
+                                        },
+                                    },
+                                    {
+                                        name: 'Yield unit',
+                                        desc: 'Frontmatter property name for recipe yield unit.',
+                                        control: {
+                                            type: 'text' as const,
+                                            key: 'yieldUnitProperty',
+                                            placeholder:
+                                                DEFAULT_SETTINGS.yieldUnitProperty,
+                                            defaultValue:
+                                                DEFAULT_SETTINGS.yieldUnitProperty,
                                             validate: validatePropertyName,
                                         },
                                     },
