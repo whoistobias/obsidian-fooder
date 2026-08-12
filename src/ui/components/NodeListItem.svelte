@@ -8,6 +8,7 @@
         getNodeLabel,
     } from '../../utils/node-macros';
     import { formatKcal } from '../../utils/format-kcal';
+    import { formatGrams } from '../../utils/format-grams';
     import { getMacroSelectionContext } from '../macro-selection.svelte';
     import { icon } from '../attachments/icon';
     import ListItem from './ListItem.svelte';
@@ -91,7 +92,7 @@
             <div>{node.label}&nbsp;</div>
             {#if node.recipeFile}
                 <span class="text-ui-smaller text-faint"
-                    >{node.totals.weight_grams}g</span
+                    >{formatGrams(node.totals.weight_grams)}g</span
                 >
             {/if}
             <div class="flex-1"></div>
@@ -145,7 +146,7 @@
         >
             <div>
                 {node.item.name}&nbsp;<span class="text-ui-smaller text-faint"
-                    >{node.item.weight_grams}g</span
+                    >{formatGrams(node.item.weight_grams)}g</span
                 >
             </div>
             <div class="text-ui-smaller text-faint group-hover:text-normal">
