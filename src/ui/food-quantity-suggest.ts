@@ -9,8 +9,18 @@ import {
 } from 'obsidian';
 import type FooderPlugin from '../main';
 import { isFoodFile, isRecipeFile } from '../utils/file-classification';
+import { aliasHasExplicitQuantity } from '../utils/parse-quantity';
 
 const WIKILINK_QUANTITY_PATTERN = /\[\[([^\]]+)\]\](?!\s)([^[]*)$/;
+
+/** Dismiss when user typed a trailing space, except `2 `-style in-progress amounts. */
+function shouldDismissQuantityQuery(query: string): boolean {
+    if (!query.endsWith(' ')) {
+        return false;
+    }
+
+    return !/^(\d+\s*\/\s*\d+|\d+\.\d*|\d+)\s+$/.test(query);
+}
 
 function parseWikilinkContent(linkContent: string): {
     target: string;
@@ -64,6 +74,16 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
         const { target: linkText, alias: linkAlias } = parseWikilinkContent(
             match[1],
         );
+        const query = match[2] ?? '';
+
+        if (aliasHasExplicitQuantity(linkAlias)) {
+            return null;
+        }
+
+        if (shouldDismissQuantityQuery(query)) {
+            return null;
+        }
+
         const dest = this.app.metadataCache.getFirstLinkpathDest(
             linkText,
             file.path,
@@ -92,7 +112,7 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
         return {
             start: { line: cursor.line, ch: match.index || 0 },
             end: cursor,
-            query: match[2] ?? '',
+            query,
         };
     }
 
@@ -142,10 +162,18 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
 
     selectSuggestion(
         _value: FoodSuggestion,
-        _evt: MouseEvent | KeyboardEvent,
+        evt: MouseEvent | KeyboardEvent,
     ): void {
         const context = this.context;
-        if (!context || !this.linkText || !context.query) {
+        if (!context || !this.linkText) {
+            return;
+        }
+
+        if (!context.query) {
+            if (evt instanceof KeyboardEvent && evt.key === 'Enter') {
+                this.close();
+                context.editor.replaceRange('\n', context.end);
+            }
             return;
         }
 

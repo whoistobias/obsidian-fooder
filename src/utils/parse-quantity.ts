@@ -7,6 +7,8 @@ const UNIT_PATTERN = Array.from(ALL_UNIT_VALUES)
 
 const NUMBER_PATTERN = /(\d+\s*\/\s*\d+|\d+\.\d+|\d+)/;
 
+const LEADING_NUMBER_PATTERN = /^(\d+\s*\/\s*\d+|\d+\.\d+|\d+)/;
+
 const UNIT_PATTERN_REGEX = new RegExp(
 	`(?:^|[\\s\\d])(${UNIT_PATTERN})(?=\\b|[\\s]|$|[^a-z])`,
 	'i',
@@ -20,6 +22,15 @@ const UNIT_PATTERN_REGEX = new RegExp(
 //   [[butter|1/2 tbsp butter]]     → amount: 0.5,  unit: tbsp
 //   [[apple]]                      → amount:   1,  unit: unit
 //   [[salt|salt]]                  → amount:   1,  unit: unit
+/** True when alias text begins with an explicit numeric quantity (e.g. `2 Egg`, `100g flour`). */
+export function aliasHasExplicitQuantity(alias: string | undefined): boolean {
+	if (!alias) {
+		return false;
+	}
+
+	return LEADING_NUMBER_PATTERN.test(alias.trimStart());
+}
+
 export function parseQuantity(displayText: string | undefined): Quantity {
 	const defaultQuantity: Quantity = { amount: 1, unit: 'unit' };
 	const text = displayText?.trim();
