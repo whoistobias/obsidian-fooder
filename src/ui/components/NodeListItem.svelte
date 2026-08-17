@@ -30,7 +30,7 @@
     const nodeLabel = $derived(getNodeLabel(node));
     const macrosOpen = $derived(macroSelection.isSelected(nodeKey));
 
-    const startsCollapsed = () =>
+    const startsCollapsed =
         node.type === 'group' && node.recipeFile !== undefined;
     let expanded = $state(!startsCollapsed);
 
