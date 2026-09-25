@@ -98,7 +98,7 @@
             <div class="flex-1"></div>
             <div
                 class="text-ui-smaller text-faint group-hover:text-normal group-hover:opacity-100"
-                class:opacity-0={expanded}
+                class:opacity-70={expanded}
                 class:opacity-100={!expanded}
             >
                 {formatKcal(node.totals.calories)} kcal
