@@ -6,7 +6,11 @@ import {
 } from 'obsidian';
 import { type FooderSettings } from '../settings';
 import type { FoodItem, Quantity, RequiredFrontmatter } from '../types';
-import { parseQuantity } from './parse-quantity';
+import {
+    definedUnitToGrams,
+    parseCustomUnits,
+    resolveAliasQuantity,
+} from './custom-units';
 import { parseUnit, UNITS } from './units';
 
 export function createFoodItem(
@@ -41,7 +45,16 @@ export function createFoodItem(
         },
         issues,
     } = validateFrontmatter(cache.frontmatter ?? {}, settings);
-    foodItem.issues = issues;
+    const customUnits = parseCustomUnits(
+        cache.frontmatter ?? {},
+        settings.unitsProperty,
+    );
+    const alias = resolveAliasQuantity(displayText, customUnits);
+    foodItem.issues = [...issues, ...customUnits.noteIssues];
+    if (alias.kind === 'rejected') {
+        foodItem.issues.push(alias.issue);
+        return foodItem;
+    }
     if (servingSize === 0) {
         return foodItem;
     }
@@ -49,9 +62,11 @@ export function createFoodItem(
         amount: servingSize,
         unit: servingSizeUnit,
     };
-    const quantity = parseQuantity(displayText);
     const servingSizeGrams = quantityToGrams(servingQuantity);
-    const amountGrams = convertToGrams(quantity, servingSizeGrams);
+    const amountGrams =
+        alias.kind === 'custom'
+            ? definedUnitToGrams(alias.multiplier, alias.unit, servingSizeGrams)
+            : convertToGrams(alias.quantity, servingSizeGrams);
 
     foodItem.protein = amountGrams * (protein / servingSizeGrams);
     foodItem.calories = amountGrams * (calories / servingSizeGrams);

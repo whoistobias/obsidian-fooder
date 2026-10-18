@@ -8,6 +8,12 @@ import {
     type TFile,
 } from 'obsidian';
 import type FooderPlugin from '../main';
+import {
+    formatCustomUnitNote,
+    parseCustomUnits,
+    splitQuantityQuery,
+    suggestUnitRows,
+} from '../utils/custom-units';
 import { isFoodFile, isRecipeFile } from '../utils/file-classification';
 import { aliasHasExplicitQuantity } from '../utils/parse-quantity';
 
@@ -41,6 +47,8 @@ interface FoodSuggestion {
     title: string;
     note: string;
     titleMuted: boolean;
+    /** Text inserted before the food name. Omitted for the empty-query placeholder. */
+    aliasPrefix?: string;
 }
 
 export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
@@ -133,13 +141,63 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
             ];
         }
 
-        return [
-            {
-                title: context.query,
+        const query = splitQuantityQuery(context.query);
+        if (!query) {
+            return [
+                {
+                    title: context.query,
+                    note: displayName,
+                    titleMuted: false,
+                    aliasPrefix: context.query,
+                },
+            ];
+        }
+
+        const cache = this.app.metadataCache.getFileCache(this.linkedFile);
+        const customUnits = parseCustomUnits(
+            cache?.frontmatter ?? {},
+            this.plugin.settings.unitsProperty,
+        );
+        const rows = suggestUnitRows(customUnits, query.fragment);
+        const suggestions: FoodSuggestion[] = [];
+
+        if (!query.fragment) {
+            suggestions.push({
+                title: query.amountText,
                 note: displayName,
                 titleMuted: false,
-            },
-        ];
+                aliasPrefix: query.amountText,
+            });
+        }
+
+        if (rows.grams) {
+            const gramsLabel = `${query.amountText}${rows.grams.key}`;
+            suggestions.push({
+                title: gramsLabel,
+                note: formatCustomUnitNote(rows.grams),
+                titleMuted: false,
+                aliasPrefix: gramsLabel,
+            });
+        } else if (rows.showDefaultGrams) {
+            const gramsLabel = `${query.amountText}g`;
+            suggestions.push({
+                title: gramsLabel,
+                note: 'grams',
+                titleMuted: false,
+                aliasPrefix: gramsLabel,
+            });
+        }
+
+        for (const unit of rows.custom) {
+            suggestions.push({
+                title: `${query.amountText} ${unit.key}`,
+                note: formatCustomUnitNote(unit),
+                titleMuted: false,
+                aliasPrefix: `${query.amountText} ${unit.key}`,
+            });
+        }
+
+        return suggestions;
     }
 
     renderSuggestion(item: FoodSuggestion, el: HTMLElement): void {
@@ -161,7 +219,7 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
     }
 
     selectSuggestion(
-        _value: FoodSuggestion,
+        value: FoodSuggestion,
         evt: MouseEvent | KeyboardEvent,
     ): void {
         const context = this.context;
@@ -169,7 +227,7 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
             return;
         }
 
-        if (!context.query) {
+        if (value.aliasPrefix === undefined) {
             if (evt instanceof KeyboardEvent && evt.key === 'Enter') {
                 this.close();
                 context.editor.replaceRange('\n', context.end);
@@ -178,7 +236,7 @@ export class FoodQuantitySuggest extends EditorSuggest<FoodSuggestion> {
         }
 
         const nameForAlias = this.linkAlias ?? this.linkText;
-        const alias = `${context.query} ${nameForAlias}`;
+        const alias = `${value.aliasPrefix} ${nameForAlias}`;
         const replacement = `[[${this.linkText}|${alias}]]`;
 
         context.editor.replaceRange(replacement, context.start, context.end);

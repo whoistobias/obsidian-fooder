@@ -31,6 +31,16 @@ export function aliasHasExplicitQuantity(alias: string | undefined): boolean {
 	return LEADING_NUMBER_PATTERN.test(alias.trimStart());
 }
 
+export function parseAmountInText(text: string | undefined): number {
+	const trimmed = text?.trim();
+	if (!trimmed) {
+		return 1;
+	}
+
+	const numberMatch = trimmed.match(NUMBER_PATTERN);
+	return numberMatch?.[1] ? parseAmount(numberMatch[1]) : 1;
+}
+
 export function parseQuantity(displayText: string | undefined): Quantity {
 	const defaultQuantity: Quantity = { amount: 1, unit: 'unit' };
 	const text = displayText?.trim();
@@ -38,11 +48,10 @@ export function parseQuantity(displayText: string | undefined): Quantity {
 		return defaultQuantity;
 	}
 
-	const numberMatch = text.match(NUMBER_PATTERN);
 	const unitMatch = text.match(UNIT_PATTERN_REGEX);
 
 	return {
-		amount: numberMatch?.[1] ? parseAmount(numberMatch[1]) : 1,
+		amount: parseAmountInText(text),
 		unit: unitMatch?.[1] ? (parseUnit(unitMatch[1]) ?? 'unit') : 'unit',
 	};
 }

@@ -19,8 +19,12 @@ import {
 } from './build-food-nodes';
 import { collectLinkAncestorLines } from './collect-link-ancestors';
 import { isFoodFile, isRecipeFile } from './file-classification';
+import {
+    definedUnitToGrams,
+    parseCustomUnits,
+    resolveAliasQuantity,
+} from './custom-units';
 import { createFoodItem } from './create-food-item';
-import { parseQuantity } from './parse-quantity';
 import { parseUnit, UNITS, type UnitOfMeasure } from './units';
 
 const MAX_RECIPE_DEPTH = 15;
@@ -86,35 +90,42 @@ function finalizeRecipeNode(
     sourcePosition: SourcePosition,
 ): GroupNode {
     const ingredientSumGrams = batch.totals.weight_grams;
-    const scale = getReferenceScale(
+    const requested = getRequestedAmount(
         ingredientSumGrams,
         displayText,
         settings,
         frontmatter,
     );
+    const portion = getPortionInfo(frontmatter, settings, ingredientSumGrams);
+    const yieldGrams = portion.yieldGrams ?? ingredientSumGrams;
+    const scale = yieldGrams <= 0 ? 0 : requested.grams / yieldGrams;
 
     const scaled = scaleFoodNode(batch, scale) as GroupNode;
     // Recipe row weight reflects yield/portions eaten; children keep recipe amounts.
-    scaled.totals.weight_grams = Number(
-        getRequestedGrams(
-            ingredientSumGrams,
-            displayText,
-            settings,
-            frontmatter,
-        ).toFixed(1),
-    );
+    scaled.totals.weight_grams = Number(requested.grams.toFixed(1));
+    if (requested.issues.length > 0) {
+        scaled.issues = [...(scaled.issues ?? []), ...requested.issues];
+    }
 
     scaled.sourcePosition = sourcePosition;
     scaled.scaleFactor = scale;
     return scaled;
 }
 
-function getRequestedGrams(
+function getRequestedAmount(
     ingredientSumGrams: number,
     displayText: string | undefined,
     settings: FooderSettings,
     frontmatter: FrontMatterCache,
-): number {
+): { grams: number; issues: string[] } {
+    const customUnits = parseCustomUnits(frontmatter, settings.unitsProperty);
+    const alias = resolveAliasQuantity(displayText, customUnits);
+    const issues = [...customUnits.noteIssues];
+    if (alias.kind === 'rejected') {
+        issues.push(alias.issue);
+        return { grams: 0, issues };
+    }
+
     const portion = getPortionInfo(
         frontmatter,
         settings,
@@ -122,13 +133,16 @@ function getRequestedGrams(
     );
     const yieldGrams = portion.yieldGrams ?? ingredientSumGrams;
     if (yieldGrams <= 0) {
-        return 0;
+        return { grams: 0, issues };
     }
 
-    const quantity = parseQuantity(displayText);
-    const unitGrams =
+    const referenceGrams =
         portion.servingSizeGrams ?? portion.yieldGrams ?? yieldGrams;
-    return convertQuantityToGrams(quantity, unitGrams);
+    const grams =
+        alias.kind === 'custom'
+            ? definedUnitToGrams(alias.multiplier, alias.unit, referenceGrams)
+            : convertQuantityToGrams(alias.quantity, referenceGrams);
+    return { grams, issues };
 }
 
 async function resolveRecipeBatch(
@@ -246,31 +260,6 @@ async function resolveRecipeBatch(
         recipeFile: recipeFile.path,
         issues: issues.length > 0 ? issues : undefined,
     };
-}
-
-function getReferenceScale(
-    ingredientSumGrams: number,
-    displayText: string | undefined,
-    settings: FooderSettings,
-    frontmatter: FrontMatterCache,
-): number {
-    const portion = getPortionInfo(
-        frontmatter,
-        settings,
-        ingredientSumGrams,
-    );
-    const yieldGrams = portion.yieldGrams ?? ingredientSumGrams;
-    if (yieldGrams <= 0) {
-        return 0;
-    }
-
-    const requestedGrams = getRequestedGrams(
-        ingredientSumGrams,
-        displayText,
-        settings,
-        frontmatter,
-    );
-    return requestedGrams / yieldGrams;
 }
 
 function getPortionInfo(

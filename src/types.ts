@@ -89,6 +89,7 @@ export const SERVING_SIZE_FRONTMATTER_KEY = 'serving_size';
 export const SERVING_SIZE_UNIT_FRONTMATTER_KEY = 'serving_size_unit';
 export const YIELD_FRONTMATTER_KEY = 'yield';
 export const YIELD_UNIT_FRONTMATTER_KEY = 'yield_unit';
+export const UNITS_FRONTMATTER_KEY = 'units';
 export const CALORIES_FRONTMATTER_KEY = 'calories';
 export const PROTEIN_FRONTMATTER_KEY = 'protein';
 export const CARBS_FRONTMATTER_KEY = 'carbs';

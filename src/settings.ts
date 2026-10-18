@@ -11,6 +11,7 @@ import {
     PROTEIN_FRONTMATTER_KEY,
     SERVING_SIZE_FRONTMATTER_KEY,
     SERVING_SIZE_UNIT_FRONTMATTER_KEY,
+    UNITS_FRONTMATTER_KEY,
     YIELD_FRONTMATTER_KEY,
     YIELD_UNIT_FRONTMATTER_KEY,
 } from './types';
@@ -35,6 +36,7 @@ export interface FooderSettings {
     fiberProperty: string;
     yieldProperty: string;
     yieldUnitProperty: string;
+    unitsProperty: string;
 }
 
 export const DEFAULT_SETTINGS: FooderSettings = {
@@ -57,6 +59,7 @@ export const DEFAULT_SETTINGS: FooderSettings = {
     fiberProperty: FIBER_FRONTMATTER_KEY,
     yieldProperty: YIELD_FRONTMATTER_KEY,
     yieldUnitProperty: YIELD_UNIT_FRONTMATTER_KEY,
+    unitsProperty: UNITS_FRONTMATTER_KEY,
 };
 //
 function validatePropertyName(value: string): string | void {
@@ -479,6 +482,7 @@ export class FooderSettingTab extends PluginSettingTab {
                                                     'servingSizeUnitProperty',
                                                     'yieldProperty',
                                                     'yieldUnitProperty',
+                                                    'unitsProperty',
                                                 ] as const;
                                                 for (const key of keys) {
                                                     this.plugin.settings[key] =
@@ -604,6 +608,19 @@ export class FooderSettingTab extends PluginSettingTab {
                                                 DEFAULT_SETTINGS.yieldUnitProperty,
                                             defaultValue:
                                                 DEFAULT_SETTINGS.yieldUnitProperty,
+                                            validate: validatePropertyName,
+                                        },
+                                    },
+                                    {
+                                        name: 'Units',
+                                        desc: 'Frontmatter property name for custom units. The value is a list of strings such as carton:12 or can:425g.',
+                                        control: {
+                                            type: 'text' as const,
+                                            key: 'unitsProperty',
+                                            placeholder:
+                                                DEFAULT_SETTINGS.unitsProperty,
+                                            defaultValue:
+                                                DEFAULT_SETTINGS.unitsProperty,
                                             validate: validatePropertyName,
                                         },
                                     },
